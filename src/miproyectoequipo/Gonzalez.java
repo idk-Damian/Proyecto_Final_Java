@@ -10,4 +10,5 @@ package miproyectoequipo;
  */
 public class Gonzalez {
     //Hola Grupo
+    //Computación Visual
 }
