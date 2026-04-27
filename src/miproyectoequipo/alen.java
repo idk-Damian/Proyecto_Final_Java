@@ -9,5 +9,7 @@ package miproyectoequipo;
  * @author Acer Predator
  */
 public class alen {
-    
+    public static void main(String[] args) {
+        System.out.println("Hola Alen");
+    }
 }
