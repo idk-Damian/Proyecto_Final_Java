@@ -1,1 +1,8 @@
 /nbproject/private/
+/build/
+/dist/
+/sdk_zkteco/
+temp_fingerprint.bmp
+temp_enroll.bmp
+fingerprint.bmp
+db.properties
