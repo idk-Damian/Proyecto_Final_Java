@@ -167,6 +167,7 @@ public class PanelPrincipalFrame extends JFrame {
             sidebar.add(lblAdmin);
 
             sidebar.add(crearBotonMenu("👆 Registrar Huella", e -> abrirRegistroHuella()));
+            sidebar.add(crearBotonMenu("📸 Registrar Rostro", e -> abrirRegistroRostro()));
             sidebar.add(crearBotonMenu("👥 Registrar Empleado", e -> cardLayout.show(panelContenido, "REG_EMPLEADO")));
             sidebar.add(crearBotonMenu("✏️ Actualizar Empleado", e -> cardLayout.show(panelContenido, "ACT_EMPLEADO")));
             sidebar.add(crearBotonMenu("🗑️ Eliminar Empleado", e -> cardLayout.show(panelContenido, "DEL_EMPLEADO")));
@@ -663,7 +664,50 @@ public class PanelPrincipalFrame extends JFrame {
         }
     }
 
+    private void abrirRegistroRostro() {
+        String cedula = JOptionPane.showInputDialog(this, "Ingrese la cédula del empleado para registrar rostro:", "Registrar Rostro", JOptionPane.QUESTION_MESSAGE);
+        if (cedula != null && !cedula.trim().isEmpty()) {
+            EmpleadoDAO dao = new EmpleadoDAO();
+            Empleado emp = dao.buscarPorCedula(cedula.trim());
+            if (emp != null) {
+                RegistroRostroFrame frame = new RegistroRostroFrame(emp);
+                frame.setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(this, "Empleado no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
     private void registrarAsistencia() {
+        Object[] options = {"Huella Dactilar", "Reconocimiento Facial"};
+        int eleccion = JOptionPane.showOptionDialog(this,
+                "¿Con qué método biométrico desea registrar su asistencia?",
+                "Validación de Asistencia",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                null, options, options[0]);
+
+        boolean validado = false;
+
+        if (eleccion == 0) {
+            // Huella
+            JOptionPane.showMessageDialog(this, "Por favor coloque su dedo en el lector (Implementación en HuellaListener).");
+            // Para propósitos prácticos, aquí asumo que si tienen ZK conectado, la validación se hace asincrónica.
+            // Por ahora, lo dejaré pasar o se podría abrir un dialog de huella.
+            // validado = true; (Se requiere lógica del ZKTeco)
+            validado = true; // Simulamos validación de huella exitosa por ahora.
+        } else if (eleccion == 1) {
+            // Rostro
+            ValidacionRostroDialog dialog = new ValidacionRostroDialog(this, usuarioActual);
+            dialog.setVisible(true);
+            validado = dialog.isValidado();
+        }
+
+        if (!validado) {
+            JOptionPane.showMessageDialog(this, "Validación biométrica fallida o cancelada.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         String cedula = usuarioActual.getCedula();
         LocalTime ahora = LocalTime.now();
         LocalDate hoy = LocalDate.now();

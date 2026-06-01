@@ -62,6 +62,26 @@ public class EmpleadoDAO {
     }
 
     /**
+     * Busca un empleado por su ID interno.
+     * @param id del empleado
+     * @return Empleado encontrado o null
+     */
+    public Empleado buscarPorId(int id) {
+        String sql = "SELECT * FROM empleados WHERE id = ?";
+        try (Connection conn = ConexionDB.getInstancia().getConexion();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return mapearEmpleado(rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[EmpleadoDAO] Error al buscar por id: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
      * Modifica la información de un empleado.
      * @param empleado con datos actualizados
      * @return true si se modificó
