@@ -24,14 +24,16 @@ public class UsuarioDAO {
      * @return true si se insertó correctamente
      */
     public boolean insertar(Usuario usuario) {
-        String sql = "INSERT INTO usuarios (cedula, nombre, contrasena, perfil, activo) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO usuarios (cedula, nombre, usuario, email, contrasena, perfil, activo) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, usuario.getCedula());
             ps.setString(2, usuario.getNombre());
-            ps.setString(3, usuario.getContrasena());
-            ps.setString(4, usuario.getPerfil().name());
-            ps.setBoolean(5, usuario.isActivo());
+            ps.setString(3, usuario.getUsuario());
+            ps.setString(4, usuario.getEmail());
+            ps.setString(5, usuario.getContrasena());
+            ps.setString(6, usuario.getPerfil().name());
+            ps.setBoolean(7, usuario.isActivo());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("[UsuarioDAO] Error al insertar: " + e.getMessage());
@@ -60,17 +62,20 @@ public class UsuarioDAO {
     }
 
     /**
-     * Autenticación por cédula y contraseña (fallback sin lector).
-     * @param cedula del usuario
+     * Autenticación por identificador (cédula, correo o nombre de usuario) y contraseña.
+     * @param identificador cédula, correo o nombre de usuario
      * @param contrasena del usuario
      * @return Usuario autenticado o null
      */
-    public Usuario autenticar(String cedula, String contrasena) {
-        String sql = "SELECT * FROM usuarios WHERE cedula = ? AND contrasena = ? AND activo = 1";
+    public Usuario autenticar(String identificador, String contrasena) {
+        String sql = "SELECT * FROM usuarios WHERE (cedula = ? OR email = ? OR usuario = ?) "
+                   + "AND contrasena = ? AND activo = 1";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, cedula);
-            ps.setString(2, contrasena);
+            ps.setString(1, identificador);
+            ps.setString(2, identificador);
+            ps.setString(3, identificador);
+            ps.setString(4, contrasena);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 return mapearUsuario(rs);
@@ -108,6 +113,8 @@ public class UsuarioDAO {
         u.setId(rs.getInt("id"));
         u.setCedula(rs.getString("cedula"));
         u.setNombre(rs.getString("nombre"));
+        u.setUsuario(rs.getString("usuario"));
+        u.setEmail(rs.getString("email"));
         u.setContrasena(rs.getString("contrasena"));
         u.setPerfil(Perfil.valueOf(rs.getString("perfil")));
         u.setActivo(rs.getBoolean("activo"));

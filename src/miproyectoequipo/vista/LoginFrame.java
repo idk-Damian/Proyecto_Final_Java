@@ -1,18 +1,18 @@
 /*
  * Vista: Pantalla de Login con autenticación por huella dactilar
- * Permite login por huella ZKTeco o por cédula/contraseña (fallback)
+ * Permite login por huella ZKTeco, rostro o por cédula/contraseña (fallback).
+ *
+ * Diseño: Swing nativo con identidad institucional UTA (rojo vinotinto).
  */
 package miproyectoequipo.vista;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.Map;
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.border.*;
 import miproyectoequipo.dao.ConexionDB;
 import miproyectoequipo.dao.HuellaDAO;
 import miproyectoequipo.dao.UsuarioDAO;
@@ -23,24 +23,20 @@ import miproyectoequipo.modelo.Usuario;
 /**
  * Pantalla de inicio de sesión.
  * Modo principal: autenticación por huella dactilar (ZKTeco ZK9500).
- * Modo alternativo: cédula + contraseña (si no hay lector conectado).
+ * Modos alternativos: reconocimiento facial y cédula + contraseña.
  *
  * @author Vladimir
  */
 public class LoginFrame extends JFrame implements HuellaListener {
 
-    // Colores del tema
-    private static final Color COLOR_FONDO = new Color(15, 23, 42);
-    private static final Color COLOR_PANEL = new Color(30, 41, 59);
-    private static final Color COLOR_PANEL_CLARO = new Color(51, 65, 85);
-    private static final Color COLOR_ACENTO = new Color(56, 189, 248);
-    private static final Color COLOR_ACENTO_HOVER = new Color(14, 165, 233);
-    private static final Color COLOR_EXITO = new Color(34, 197, 94);
-    private static final Color COLOR_ERROR = new Color(239, 68, 68);
-    private static final Color COLOR_TEXTO = new Color(226, 232, 240);
-    private static final Color COLOR_TEXTO_SEC = new Color(148, 163, 184);
-    private static final Color COLOR_INPUT_BG = new Color(15, 23, 42);
-    private static final Color COLOR_INPUT_BORDER = new Color(71, 85, 105);
+    // Paleta institucional UTA sobre Look & Feel nativo
+    private static final Color COLOR_UTA = new Color(122, 0, 30);
+    private static final Color COLOR_UTA_OSCURO = new Color(90, 0, 22);
+    private static final Color COLOR_BORDE = new Color(190, 190, 190);
+    private static final Color COLOR_EXITO = new Color(0, 128, 0);
+    private static final Color COLOR_ERROR = new Color(178, 0, 0);
+    private static final Color COLOR_TEXTO = Color.BLACK;
+    private static final Color COLOR_TEXTO_SEC = new Color(90, 90, 90);
 
     // Componentes
     private JLabel lblEstadoHuella;
@@ -69,10 +65,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
     private HuellaDAO huellaDAO;
     private boolean lectorConectado = false;
 
-    // Animación
-    private Timer animTimer;
-    private int animAngle = 0;
-
     public LoginFrame() {
         usuarioDAO = new UsuarioDAO();
         empleadoDAO = new miproyectoequipo.dao.EmpleadoDAO();
@@ -88,7 +80,9 @@ public class LoginFrame extends JFrame implements HuellaListener {
 
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
+
         lblTitulo = new javax.swing.JLabel();
+
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Sistema de Asistencia - Iniciar Sesion");
 
@@ -102,7 +96,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
             .addGroup(layout.createSequentialGroup()
                 .addGap(160, 160, 160)
                 .addComponent(lblTitulo)
-                .addContainerGap(160, Short.MAX_VALUE))
+                .addContainerGap(172, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -119,39 +113,39 @@ public class LoginFrame extends JFrame implements HuellaListener {
     private void initCustomComponents() {
         // Limpiamos el diseño auto-generado para poner el nuestro
         getContentPane().removeAll();
-        setTitle("Sistema de Asistencia — Iniciar Sesión");
+        setTitle("Universidad Técnica de Ambato - Iniciar Sesión");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(520, 680);
+        setSize(520, 640);
         setLocationRelativeTo(null);
         setResizable(false);
-        getContentPane().setBackground(COLOR_FONDO);
         setLayout(new BorderLayout());
 
-        // === Panel Superior: Título ===
+        // === Banner superior (rojo UTA) ===
         JPanel panelTitulo = new JPanel();
-        panelTitulo.setBackground(COLOR_FONDO);
+        panelTitulo.setBackground(COLOR_UTA);
         panelTitulo.setLayout(new BoxLayout(panelTitulo, BoxLayout.Y_AXIS));
-        panelTitulo.setBorder(BorderFactory.createEmptyBorder(30, 0, 10, 0));
+        panelTitulo.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 3, 0, COLOR_UTA_OSCURO),
+            BorderFactory.createEmptyBorder(18, 0, 18, 0)));
 
-        JLabel lblTitulo = new JLabel("🏢 Sistema de Asistencia", SwingConstants.CENTER);
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        lblTitulo.setForeground(COLOR_TEXTO);
-        lblTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel lblTit = new JLabel("Sistema de Asistencia", SwingConstants.CENTER);
+        lblTit.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        lblTit.setForeground(Color.WHITE);
+        lblTit.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel lblSubtitulo = new JLabel("Registro de Empleados", SwingConstants.CENTER);
+        JLabel lblSubtitulo = new JLabel("Universidad Técnica de Ambato", SwingConstants.CENTER);
         lblSubtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        lblSubtitulo.setForeground(COLOR_TEXTO_SEC);
+        lblSubtitulo.setForeground(new Color(255, 220, 220));
         lblSubtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        panelTitulo.add(lblTitulo);
-        panelTitulo.add(Box.createRigidArea(new Dimension(0, 5)));
+        panelTitulo.add(lblTit);
+        panelTitulo.add(Box.createRigidArea(new Dimension(0, 4)));
         panelTitulo.add(lblSubtitulo);
         add(panelTitulo, BorderLayout.NORTH);
 
         // === Panel Central con CardLayout ===
         cardLayout = new CardLayout();
         panelCentral = new JPanel(cardLayout);
-        panelCentral.setOpaque(false);
 
         panelHuella = crearPanelHuella();
         panelManual = crearPanelManual();
@@ -163,42 +157,36 @@ public class LoginFrame extends JFrame implements HuellaListener {
 
         add(panelCentral, BorderLayout.CENTER);
 
-        // === Panel Inferior: Toggle y estado ===
+        // === Panel Inferior: selección de modo + estado ===
         JPanel panelInferior = new JPanel();
-        panelInferior.setBackground(COLOR_FONDO);
         panelInferior.setLayout(new BoxLayout(panelInferior, BoxLayout.Y_AXIS));
-        panelInferior.setBorder(BorderFactory.createEmptyBorder(0, 40, 25, 40));
+        panelInferior.setBorder(BorderFactory.createEmptyBorder(8, 40, 18, 40));
 
-        // === Panel Inferior: Controles de Cambio de Modo ===
-        JPanel panelBotonesModo = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
-        panelBotonesModo.setBackground(COLOR_FONDO);
+        JPanel panelBotonesModo = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
 
-        JButton btnHuella = crearBotonLink("👆 Huella");
+        JButton btnHuella = new JButton("Huella");
         btnHuella.addActionListener(e -> cambiarModo(0));
-        
-        JButton btnManual = crearBotonLink("🔐 Manual");
+        JButton btnManual = new JButton("Manual");
         btnManual.addActionListener(e -> cambiarModo(1));
-
-        JButton btnRostro = crearBotonLink("📸 Rostro");
+        JButton btnRostro = new JButton("Rostro");
         btnRostro.addActionListener(e -> cambiarModo(2));
 
         panelBotonesModo.add(btnHuella);
         panelBotonesModo.add(btnManual);
         panelBotonesModo.add(btnRostro);
 
-        // Estado de conexión
         lblMensaje = new JLabel(" ", SwingConstants.CENTER);
         lblMensaje.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblMensaje.setForeground(COLOR_TEXTO_SEC);
         lblMensaje.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         panelInferior.add(panelBotonesModo);
-        panelInferior.add(Box.createRigidArea(new Dimension(0, 10)));
+        panelInferior.add(Box.createRigidArea(new Dimension(0, 8)));
         panelInferior.add(lblMensaje);
 
         add(panelInferior, BorderLayout.SOUTH);
 
-        // Cerrar lector al salir
+        // Cerrar recursos al salir
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -209,92 +197,33 @@ public class LoginFrame extends JFrame implements HuellaListener {
                 ConexionDB.getInstancia().cerrarConexion();
             }
         });
-
-        // Animación de espera
-        animTimer = new Timer(50, e -> {
-            animAngle = (animAngle + 3) % 360;
-            if (lblImagenHuella != null) {
-                lblImagenHuella.repaint();
-            }
-        });
     }
 
     /**
-     * Crea el panel de login por huella dactilar.
+     * Crea el panel de login por huella dactilar (estilo nativo).
      */
     private JPanel crearPanelHuella() {
-        JPanel panel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                // Fondo del card con bordes redondeados
-                int x = 40, y = 10, w = getWidth() - 80, h = getHeight() - 20;
-                g2d.setColor(COLOR_PANEL);
-                g2d.fill(new RoundRectangle2D.Float(x, y, w, h, 20, 20));
-
-                // Borde sutil
-                g2d.setColor(COLOR_PANEL_CLARO);
-                g2d.setStroke(new BasicStroke(1));
-                g2d.draw(new RoundRectangle2D.Float(x, y, w, h, 20, 20));
-
-                g2d.dispose();
-            }
-        };
-        panel.setOpaque(false);
+        JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(30, 70, 20, 70));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createEmptyBorder(20, 60, 20, 60),
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(COLOR_UTA), "Ingreso por Huella Dactilar")));
 
-        // Icono de huella / imagen del sensor
-        lblImagenHuella = new JLabel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                if (getIcon() == null && !lectorConectado) {
-                    // Dibujar animación circular de espera
-                    Graphics2D g2d = (Graphics2D) g.create();
-                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                    int cx = getWidth() / 2;
-                    int cy = getHeight() / 2;
-                    int radius = 50;
-
-                    // Círculo base
-                    g2d.setColor(COLOR_PANEL_CLARO);
-                    g2d.setStroke(new BasicStroke(3));
-                    g2d.drawOval(cx - radius, cy - radius, radius * 2, radius * 2);
-
-                    // Arco animado
-                    g2d.setColor(COLOR_ACENTO);
-                    g2d.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                    g2d.drawArc(cx - radius, cy - radius, radius * 2, radius * 2, animAngle, 90);
-
-                    // Icono de huella (texto)
-                    g2d.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 40));
-                    FontMetrics fm = g2d.getFontMetrics();
-                    String icon = "🔒";
-                    g2d.setColor(COLOR_TEXTO_SEC);
-                    g2d.drawString(icon, cx - fm.stringWidth(icon) / 2, cy + fm.getAscent() / 3);
-
-                    g2d.dispose();
-                }
-            }
-        };
+        lblImagenHuella = new JLabel("(Sensor de huella)", SwingConstants.CENTER);
         lblImagenHuella.setPreferredSize(new Dimension(200, 200));
         lblImagenHuella.setMaximumSize(new Dimension(200, 200));
         lblImagenHuella.setHorizontalAlignment(SwingConstants.CENTER);
+        lblImagenHuella.setForeground(COLOR_TEXTO_SEC);
+        lblImagenHuella.setBorder(BorderFactory.createLineBorder(COLOR_BORDE));
         lblImagenHuella.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Estado
         lblEstadoHuella = new JLabel("Conectando al lector...", SwingConstants.CENTER);
         lblEstadoHuella.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblEstadoHuella.setForeground(COLOR_TEXTO);
         lblEstadoHuella.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Botón conectar/reconectar
-        btnConectarLector = crearBoton("🔄 Reconectar Lector", COLOR_PANEL_CLARO);
+        btnConectarLector = new JButton("Reconectar Lector");
         btnConectarLector.setAlignmentX(Component.CENTER_ALIGNMENT);
         btnConectarLector.addActionListener(e -> intentarConectarLector());
         btnConectarLector.setVisible(false);
@@ -305,52 +234,29 @@ public class LoginFrame extends JFrame implements HuellaListener {
         panel.add(lblEstadoHuella);
         panel.add(Box.createRigidArea(new Dimension(0, 15)));
         panel.add(btnConectarLector);
+        panel.add(Box.createVerticalGlue());
 
         return panel;
     }
 
     /**
-     * Crea el panel de login manual (cédula + contraseña).
+     * Crea el panel de login manual (cédula + contraseña) e incluye el registro de usuarios.
      */
     private JPanel crearPanelManual() {
-        JPanel panel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int x = 40, y = 10, w = getWidth() - 80, h = getHeight() - 20;
-                g2d.setColor(COLOR_PANEL);
-                g2d.fill(new RoundRectangle2D.Float(x, y, w, h, 20, 20));
-                g2d.setColor(COLOR_PANEL_CLARO);
-                g2d.setStroke(new BasicStroke(1));
-                g2d.draw(new RoundRectangle2D.Float(x, y, w, h, 20, 20));
-                g2d.dispose();
-            }
-        };
-        panel.setOpaque(false);
+        JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(40, 80, 20, 80));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createEmptyBorder(20, 70, 20, 70),
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(COLOR_UTA), "Inicio de Sesión Manual")));
 
-        JLabel lblIcono = new JLabel("🔐", SwingConstants.CENTER);
-        lblIcono.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 48));
-        lblIcono.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel lblTitLogin = new JLabel("Iniciar Sesión Manual", SwingConstants.CENTER);
-        lblTitLogin.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblTitLogin.setForeground(COLOR_TEXTO);
-        lblTitLogin.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        // Campo Cédula
-        JLabel lblCedula = new JLabel("Cédula");
+        JLabel lblCedula = new JLabel("Cédula, correo o usuario");
         lblCedula.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblCedula.setForeground(COLOR_TEXTO_SEC);
         lblCedula.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         txtCedula = crearCampoTexto();
 
-        // Campo Contraseña
         JLabel lblPass = new JLabel("Contraseña");
         lblPass.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblPass.setForeground(COLOR_TEXTO_SEC);
@@ -359,10 +265,15 @@ public class LoginFrame extends JFrame implements HuellaListener {
         txtContrasena = new JPasswordField();
         estilizarCampo(txtContrasena);
 
-        // Botón login
-        btnLoginManual = crearBoton("Ingresar", COLOR_ACENTO);
-        btnLoginManual.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnLoginManual = new JButton("Ingresar");
+        btnLoginManual.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnLoginManual.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         btnLoginManual.addActionListener(e -> loginManual());
+
+        JButton btnRegistrar = new JButton("Registrar nuevo usuario");
+        btnRegistrar.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnRegistrar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        btnRegistrar.addActionListener(e -> mostrarDialogoRegistro());
 
         // Enter para login
         txtContrasena.addKeyListener(new KeyAdapter() {
@@ -374,10 +285,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
             }
         });
 
-        panel.add(lblIcono);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(lblTitLogin);
-        panel.add(Box.createRigidArea(new Dimension(0, 25)));
+        panel.add(Box.createRigidArea(new Dimension(0, 15)));
         panel.add(lblCedula);
         panel.add(Box.createRigidArea(new Dimension(0, 5)));
         panel.add(txtCedula);
@@ -385,44 +293,30 @@ public class LoginFrame extends JFrame implements HuellaListener {
         panel.add(lblPass);
         panel.add(Box.createRigidArea(new Dimension(0, 5)));
         panel.add(txtContrasena);
-        panel.add(Box.createRigidArea(new Dimension(0, 25)));
+        panel.add(Box.createRigidArea(new Dimension(0, 20)));
         panel.add(btnLoginManual);
+        panel.add(Box.createRigidArea(new Dimension(0, 8)));
+        panel.add(new JSeparator());
+        panel.add(Box.createRigidArea(new Dimension(0, 8)));
+        panel.add(btnRegistrar);
+        panel.add(Box.createVerticalGlue());
 
         return panel;
     }
 
     /**
-     * Crea el panel de login por reconocimiento facial.
+     * Crea el panel de login por reconocimiento facial (estilo nativo).
      */
     private JPanel crearPanelRostro() {
-        JPanel panel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int x = 40, y = 10, w = getWidth() - 80, h = getHeight() - 20;
-                g2d.setColor(COLOR_PANEL);
-                g2d.fill(new RoundRectangle2D.Float(x, y, w, h, 20, 20));
-                g2d.setColor(COLOR_PANEL_CLARO);
-                g2d.setStroke(new BasicStroke(1));
-                g2d.draw(new RoundRectangle2D.Float(x, y, w, h, 20, 20));
-                g2d.dispose();
-            }
-        };
-        panel.setOpaque(false);
-        panel.setLayout(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
-
-        JLabel lblTitRostro = new JLabel("Ingreso Facial", SwingConstants.CENTER);
-        lblTitRostro.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblTitRostro.setForeground(COLOR_TEXTO);
-        lblTitRostro.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
-        panel.add(lblTitRostro, BorderLayout.NORTH);
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createEmptyBorder(20, 50, 20, 50),
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(COLOR_UTA), "Ingreso por Reconocimiento Facial")));
 
         lblVideoRostro = new JLabel("Esperando cámara...", SwingConstants.CENTER);
         lblVideoRostro.setForeground(COLOR_TEXTO_SEC);
+        lblVideoRostro.setBorder(BorderFactory.createLineBorder(COLOR_BORDE));
         panel.add(lblVideoRostro, BorderLayout.CENTER);
 
         return panel;
@@ -456,9 +350,9 @@ public class LoginFrame extends JFrame implements HuellaListener {
                     if (faces.size() > 0) {
                         org.bytedeco.opencv.opencv_core.Rect rect = faces.get(0);
                         org.bytedeco.opencv.opencv_core.Mat faceMat = new org.bytedeco.opencv.opencv_core.Mat(matImage, rect);
-                        
+
                         int idReconocido = rostroManager.reconocerRostro(faceMat);
-                        
+
                         if (idReconocido != -1) {
                             if (idReconocido == idReconocidoAnterior) {
                                 confirmaciones++;
@@ -528,7 +422,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
         lblEstadoHuella.setText("Conectando al lector...");
         lblEstadoHuella.setForeground(COLOR_TEXTO);
         btnConectarLector.setVisible(false);
-        animTimer.start();
 
         // Conectar en hilo separado para no bloquear UI
         new Thread(() -> {
@@ -563,6 +456,97 @@ public class LoginFrame extends JFrame implements HuellaListener {
     }
 
     /**
+     * Diálogo de registro escrito de un nuevo usuario del sistema.
+     * Si el perfil es EMPLEADO también se crea su ficha de empleado.
+     */
+    private void mostrarDialogoRegistro() {
+        JTextField txtCed = new JTextField();
+        JTextField txtNom = new JTextField();
+        JTextField txtApe = new JTextField();
+        JTextField txtUsuario = new JTextField();
+        JTextField txtEmail = new JTextField();
+        JTextField txtCargo = new JTextField();
+        JPasswordField txtPass = new JPasswordField();
+        JComboBox<String> cmbPerfil = new JComboBox<>(new String[]{"EMPLEADO", "ADMINISTRADOR"});
+        JComboBox<String> cmbTipo = new JComboBox<>(new String[]{"TIEMPO_COMPLETO", "TIEMPO_PARCIAL"});
+
+        JPanel form = new JPanel(new GridLayout(0, 1, 4, 3));
+        form.add(new JLabel("Cédula *"));
+        form.add(txtCed);
+        form.add(new JLabel("Nombre *"));
+        form.add(txtNom);
+        form.add(new JLabel("Apellido"));
+        form.add(txtApe);
+        form.add(new JLabel("Nombre de usuario (para ingresar)"));
+        form.add(txtUsuario);
+        form.add(new JLabel("Correo electrónico (para ingresar)"));
+        form.add(txtEmail);
+        form.add(new JLabel("Cargo"));
+        form.add(txtCargo);
+        form.add(new JLabel("Contraseña *"));
+        form.add(txtPass);
+        form.add(new JLabel("Perfil"));
+        form.add(cmbPerfil);
+        form.add(new JLabel("Tipo de Contrato (si es empleado)"));
+        form.add(cmbTipo);
+
+        int op = JOptionPane.showConfirmDialog(this, form, "Registro de Usuario",
+            JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (op != JOptionPane.OK_OPTION) return;
+
+        String ced = txtCed.getText().trim();
+        String nom = txtNom.getText().trim();
+        String ape = txtApe.getText().trim();
+        String nombreUsuario = txtUsuario.getText().trim();
+        String email = txtEmail.getText().trim();
+        String cargo = txtCargo.getText().trim();
+        String pass = new String(txtPass.getPassword());
+
+        if (ced.isEmpty() || nom.isEmpty() || pass.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Complete cédula, nombre y contraseña.", "Datos incompletos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (usuarioDAO.buscarPorCedula(ced) != null) {
+            JOptionPane.showMessageDialog(this, "Ya existe un usuario con esa cédula.", "Cédula duplicada", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        Usuario.Perfil perfil = Usuario.Perfil.valueOf((String) cmbPerfil.getSelectedItem());
+        String nombreCompleto = (nom + " " + ape).trim();
+        Usuario nuevo = new Usuario(ced, nombreCompleto,
+            nombreUsuario.isEmpty() ? null : nombreUsuario,
+            email.isEmpty() ? null : email,
+            pass, perfil);
+
+        if (!usuarioDAO.insertar(nuevo)) {
+            JOptionPane.showMessageDialog(this, "No se pudo registrar el usuario.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Si el usuario es empleado, también creamos su ficha de empleado
+        if (perfil == Usuario.Perfil.EMPLEADO) {
+            miproyectoequipo.modelo.Empleado.TipoContrato tipo =
+                miproyectoequipo.modelo.Empleado.TipoContrato.valueOf((String) cmbTipo.getSelectedItem());
+            miproyectoequipo.modelo.Empleado emp;
+            if (tipo == miproyectoequipo.modelo.Empleado.TipoContrato.TIEMPO_COMPLETO) {
+                emp = new miproyectoequipo.modelo.EmpleadoTiempoCompleto(ced, nom, ape, cargo);
+            } else {
+                emp = new miproyectoequipo.modelo.EmpleadoTiempoParcial(ced, nom, ape, cargo);
+            }
+            empleadoDAO.insertar(emp);
+        }
+
+        JOptionPane.showMessageDialog(this,
+            "Usuario registrado correctamente.\n\nCédula: " + ced + "\nPerfil: " + perfil.name()
+            + "\n\nYa puede iniciar sesión.",
+            "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
+
+        // Prellenar el formulario de login con la cédula registrada
+        txtCedula.setText(ced);
+        txtContrasena.requestFocusInWindow();
+    }
+
+    /**
      * Abre el panel principal con el usuario autenticado.
      */
     private void abrirPanelPrincipal(Usuario usuario) {
@@ -570,7 +554,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
             fingerprintManager.cerrar();
         }
         detenerCamaraLogin();
-        animTimer.stop();
 
         PanelPrincipalFrame panel = new PanelPrincipalFrame(usuario);
         panel.setVisible(true);
@@ -579,8 +562,8 @@ public class LoginFrame extends JFrame implements HuellaListener {
 
     private void cambiarModo(int modoSeleccionado) {
         modoActual = modoSeleccionado;
-        
-        // Stop camera if moving away from Rostro
+
+        // Detener cámara si salimos del modo Rostro
         if (modoActual != 2) {
             detenerCamaraLogin();
         }
@@ -617,6 +600,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
             BufferedImage img = ImageIO.read(new File("temp_fingerprint.bmp"));
             if (img != null) {
                 Image scaled = img.getScaledInstance(180, 200, Image.SCALE_SMOOTH);
+                lblImagenHuella.setText(null);
                 lblImagenHuella.setIcon(new ImageIcon(scaled));
             }
         } catch (Exception e) {
@@ -633,8 +617,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
     @Override
     public void onDispositivoListo(int ancho, int alto) {
         lectorConectado = true;
-        animTimer.stop();
-        lblEstadoHuella.setText("✅ Lector conectado — Coloque su dedo");
+        lblEstadoHuella.setText("Lector conectado - Coloque su dedo");
         lblEstadoHuella.setForeground(COLOR_EXITO);
         btnConectarLector.setVisible(false);
         mostrarMensaje("Lector ZK9500 listo. Esperando huella...", COLOR_EXITO);
@@ -643,11 +626,10 @@ public class LoginFrame extends JFrame implements HuellaListener {
     @Override
     public void onDispositivoError(String mensaje) {
         lectorConectado = false;
-        animTimer.stop();
-        lblEstadoHuella.setText("❌ " + mensaje);
+        lblEstadoHuella.setText(mensaje);
         lblEstadoHuella.setForeground(COLOR_ERROR);
         btnConectarLector.setVisible(true);
-        mostrarMensaje("Sin lector. Use login manual.", COLOR_TEXTO_SEC);
+        mostrarMensaje("Sin lector. Use el inicio de sesión manual.", COLOR_TEXTO_SEC);
         // Cambiar automáticamente al modo manual
         cardLayout.show(panelCentral, "MANUAL");
     }
@@ -666,7 +648,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
     public void onIdentificacionResultado(String cedula, int score) {
         if (cedula != null) {
             miproyectoequipo.utils.AudioPlayer.reproducirMP3("src/miproyectoequipo/audios/verificado.mp3");
-            lblEstadoHuella.setText("✅ Huella reconocida — Bienvenido");
+            lblEstadoHuella.setText("Huella reconocida - Bienvenido");
             lblEstadoHuella.setForeground(COLOR_EXITO);
 
             // Buscar usuario por cédula
@@ -678,11 +660,11 @@ public class LoginFrame extends JFrame implements HuellaListener {
                 t.setRepeats(false);
                 t.start();
             } else {
-                lblEstadoHuella.setText("⚠ Huella reconocida pero sin usuario asociado.");
+                lblEstadoHuella.setText("Huella reconocida pero sin usuario asociado.");
                 lblEstadoHuella.setForeground(COLOR_ERROR);
             }
         } else {
-            lblEstadoHuella.setText("❌ Huella no reconocida");
+            lblEstadoHuella.setText("Huella no reconocida");
             lblEstadoHuella.setForeground(COLOR_ERROR);
 
             // Restaurar mensaje después de 2 segundos
@@ -701,62 +683,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
     // Utilidades de UI
     // =============================================
 
-    private JButton crearBoton(String texto, Color colorFondo) {
-        JButton btn = new JButton(texto) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                if (getModel().isPressed()) {
-                    g2d.setColor(colorFondo.darker());
-                } else if (getModel().isRollover()) {
-                    g2d.setColor(colorFondo.brighter());
-                } else {
-                    g2d.setColor(colorFondo);
-                }
-
-                g2d.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 12, 12));
-                g2d.setColor(COLOR_TEXTO);
-                g2d.setFont(getFont());
-                FontMetrics fm = g2d.getFontMetrics();
-                int x = (getWidth() - fm.stringWidth(getText())) / 2;
-                int y = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
-                g2d.drawString(getText(), x, y);
-                g2d.dispose();
-            }
-        };
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btn.setPreferredSize(new Dimension(280, 42));
-        btn.setMaximumSize(new Dimension(280, 42));
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
-    }
-
-    private JButton crearBotonLink(String texto) {
-        JButton btn = new JButton(texto);
-        btn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        btn.setForeground(COLOR_ACENTO);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setFocusPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btn.setForeground(COLOR_ACENTO_HOVER);
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btn.setForeground(COLOR_ACENTO);
-            }
-        });
-        return btn;
-    }
-
     private JTextField crearCampoTexto() {
         JTextField field = new JTextField();
         estilizarCampo(field);
@@ -765,14 +691,11 @@ public class LoginFrame extends JFrame implements HuellaListener {
 
     private void estilizarCampo(JTextField field) {
         field.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        field.setForeground(COLOR_TEXTO);
-        field.setBackground(COLOR_INPUT_BG);
-        field.setCaretColor(COLOR_TEXTO);
         field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(COLOR_INPUT_BORDER, 1, true),
-            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+            BorderFactory.createLineBorder(COLOR_BORDE, 1),
+            BorderFactory.createEmptyBorder(6, 8, 6, 8)
         ));
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         field.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
 

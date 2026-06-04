@@ -20,6 +20,8 @@ public class Usuario {
     private int id;
     private String cedula;
     private String nombre;
+    private String usuario;   // nombre de usuario para login
+    private String email;     // correo para login
     private String contrasena; // fallback si no hay lector
     private Perfil perfil;
     private boolean activo;
@@ -31,6 +33,16 @@ public class Usuario {
     public Usuario(String cedula, String nombre, String contrasena, Perfil perfil) {
         this.cedula = cedula;
         this.nombre = nombre;
+        this.contrasena = contrasena;
+        this.perfil = perfil;
+        this.activo = true;
+    }
+
+    public Usuario(String cedula, String nombre, String usuario, String email, String contrasena, Perfil perfil) {
+        this.cedula = cedula;
+        this.nombre = nombre;
+        this.usuario = usuario;
+        this.email = email;
         this.contrasena = contrasena;
         this.perfil = perfil;
         this.activo = true;
@@ -59,6 +71,22 @@ public class Usuario {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+
+    public String getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(String usuario) {
+        this.usuario = usuario;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getContrasena() {

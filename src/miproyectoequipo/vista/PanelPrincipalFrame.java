@@ -1,20 +1,26 @@
 /*
  * Vista: Panel Principal (Dashboard)
  * Muestra opciones según el perfil del usuario (Admin/Empleado)
- * Provee CRUD completo de empleados, registro de asistencia y consultas/reportes detallados
+ * Provee CRUD completo de empleados, registro de asistencia y consultas/reportes detallados.
+ *
+ * Diseño: Swing nativo con identidad institucional UTA (rojo vinotinto).
  */
 package miproyectoequipo.vista;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.RoundRectangle2D;
+import java.awt.print.PrinterException;
+import java.text.MessageFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import miproyectoequipo.dao.*;
 import miproyectoequipo.huella.ZKFingerprintManager;
 import miproyectoequipo.modelo.*;
@@ -24,25 +30,21 @@ import miproyectoequipo.modelo.*;
  * Admin: acceso total (registrar huellas, gestionar empleados, reportes de todos).
  * Empleado: registrar asistencia y ver reportes propios.
  *
- * @author Vladimir & Antigravity
+ * @author Vladimir
  */
 public class PanelPrincipalFrame extends JFrame {
 
-    // Colores del tema oscuro premium
-    private static final Color COLOR_FONDO = new Color(15, 23, 42);
-    private static final Color COLOR_SIDEBAR = new Color(20, 27, 45);
-    private static final Color COLOR_PANEL = new Color(30, 41, 59);
-    private static final Color COLOR_PANEL_CLARO = new Color(51, 65, 85);
-    private static final Color COLOR_ACENTO = new Color(56, 189, 248);
-    private static final Color COLOR_EXITO = new Color(34, 197, 94);
-    private static final Color COLOR_ERROR = new Color(239, 68, 68);
-    private static final Color COLOR_WARNING = new Color(234, 179, 8);
-    private static final Color COLOR_TEXTO = new Color(226, 232, 240);
-    private static final Color COLOR_TEXTO_SEC = new Color(148, 163, 184);
+    // Paleta institucional UTA (rojo vinotinto) sobre Look & Feel nativo
+    private static final Color COLOR_UTA = new Color(122, 0, 30);
+    private static final Color COLOR_UTA_OSCURO = new Color(90, 0, 22);
+    private static final Color COLOR_EXITO = new Color(0, 128, 0);
+    private static final Color COLOR_ERROR = new Color(178, 0, 0);
+    private static final Color COLOR_TEXTO = Color.BLACK;
+    private static final Color COLOR_GRIS = new Color(90, 90, 90);
 
     // Estado
-    private Usuario usuarioActual;
-    private ZKFingerprintManager fingerprintManager;
+    private final Usuario usuarioActual;
+    private final ZKFingerprintManager fingerprintManager;
     private JPanel panelContenido;
     private CardLayout cardLayout;
     private JLabel lblReloj;
@@ -66,21 +68,21 @@ public class PanelPrincipalFrame extends JFrame {
     }
 
     private void initComponents() {
-        setTitle("Sistema de Asistencia — " + usuarioActual.getNombre());
-        setSize(1000, 700);
+        setTitle("Sistema de Asistencia UTA - " + usuarioActual.getNombre());
+        setSize(1024, 700);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        getContentPane().setBackground(COLOR_FONDO);
         setLayout(new BorderLayout());
 
-        // === Sidebar ===
-        JPanel sidebar = crearSidebar();
-        add(sidebar, BorderLayout.WEST);
+        // === Banner superior (rojo UTA) ===
+        add(crearBanner(), BorderLayout.NORTH);
+
+        // === Menú lateral ===
+        add(crearMenuLateral(), BorderLayout.WEST);
 
         // === Contenido principal ===
         cardLayout = new CardLayout();
         panelContenido = new JPanel(cardLayout);
-        panelContenido.setBackground(COLOR_FONDO);
 
         panelContenido.add(crearPanelBienvenida(), "BIENVENIDA");
         if (usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR) {
@@ -104,165 +106,143 @@ public class PanelPrincipalFrame extends JFrame {
     }
 
     /**
-     * Crea la barra lateral con navegación.
+     * Banner superior con identidad UTA, datos del usuario y reloj.
      */
-    private JPanel crearSidebar() {
-        JPanel sidebar = new JPanel();
-        sidebar.setBackground(COLOR_SIDEBAR);
-        sidebar.setPreferredSize(new Dimension(240, 0));
-        sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
-        sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, COLOR_PANEL_CLARO));
+    private JPanel crearBanner() {
+        JPanel banner = new JPanel(new BorderLayout());
+        banner.setBackground(COLOR_UTA);
+        banner.setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, COLOR_UTA_OSCURO));
 
-        // Header del sidebar
-        JPanel header = new JPanel();
-        header.setOpaque(false);
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-        header.setBorder(BorderFactory.createEmptyBorder(20, 15, 15, 15));
-        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+        JLabel lblTitulo = new JLabel("  Universidad Técnica de Ambato - Sistema de Asistencia");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTitulo.setForeground(Color.WHITE);
+        lblTitulo.setBorder(BorderFactory.createEmptyBorder(12, 10, 12, 10));
+        banner.add(lblTitulo, BorderLayout.WEST);
 
-        JLabel lblLogo = new JLabel("🏢 SisAsistencia");
-        lblLogo.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblLogo.setForeground(COLOR_ACENTO);
-        lblLogo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel derecha = new JPanel();
+        derecha.setOpaque(false);
+        derecha.setLayout(new BoxLayout(derecha, BoxLayout.Y_AXIS));
+        derecha.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 15));
 
-        // Reloj
+        String rol = usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR ? "Administrador" : "Empleado";
+        JLabel lblUser = new JLabel(usuarioActual.getNombre() + "  (" + rol + ")");
+        lblUser.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblUser.setForeground(Color.WHITE);
+        lblUser.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
         lblReloj = new JLabel();
         lblReloj.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblReloj.setForeground(COLOR_TEXTO_SEC);
-        lblReloj.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lblReloj.setForeground(new Color(255, 220, 220));
+        lblReloj.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        header.add(lblLogo);
-        header.add(Box.createRigidArea(new Dimension(0, 5)));
-        header.add(lblReloj);
+        derecha.add(lblUser);
+        derecha.add(Box.createRigidArea(new Dimension(0, 3)));
+        derecha.add(lblReloj);
+        banner.add(derecha, BorderLayout.EAST);
 
-        sidebar.add(header);
-        sidebar.add(crearSeparador());
+        return banner;
+    }
 
-        // Info del usuario
-        JPanel userInfo = new JPanel();
-        userInfo.setOpaque(false);
-        userInfo.setLayout(new BoxLayout(userInfo, BoxLayout.Y_AXIS));
-        userInfo.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
-        userInfo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+    /**
+     * Menú lateral de navegación con botones nativos.
+     */
+    private JScrollPane crearMenuLateral() {
+        JPanel menu = new JPanel();
+        menu.setLayout(new BoxLayout(menu, BoxLayout.Y_AXIS));
+        menu.setBackground(new Color(235, 235, 235));
+        menu.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 0, 1, Color.GRAY),
+            BorderFactory.createEmptyBorder(12, 8, 12, 8)
+        ));
 
-        JLabel lblUser = new JLabel("👤 " + usuarioActual.getNombre());
-        lblUser.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        lblUser.setForeground(COLOR_TEXTO);
-        lblUser.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel lblPerfil = new JLabel(
-            usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR ? "🔑 Administrador" : "📋 Empleado"
-        );
-        lblPerfil.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        lblPerfil.setForeground(
-            usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR ? COLOR_WARNING : COLOR_ACENTO
-        );
-        lblPerfil.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        userInfo.add(lblUser);
-        userInfo.add(Box.createRigidArea(new Dimension(0, 3)));
-        userInfo.add(lblPerfil);
-
-        sidebar.add(userInfo);
-        sidebar.add(crearSeparador());
-
-        // Menú
-        sidebar.add(Box.createRigidArea(new Dimension(0, 5)));
-
-        sidebar.add(crearBotonMenu("🏠 Inicio", e -> cardLayout.show(panelContenido, "BIENVENIDA")));
+        menu.add(crearEtiquetaSeccion("NAVEGACIÓN"));
+        menu.add(crearBotonMenu("Inicio", e -> cardLayout.show(panelContenido, "BIENVENIDA")));
 
         if (usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR) {
-            JLabel lblAdmin = new JLabel("  ADMINISTRACIÓN");
-            lblAdmin.setFont(new Font("Segoe UI", Font.BOLD, 10));
-            lblAdmin.setForeground(COLOR_TEXTO_SEC);
-            lblAdmin.setAlignmentX(Component.LEFT_ALIGNMENT);
-            lblAdmin.setBorder(BorderFactory.createEmptyBorder(10, 15, 5, 0));
-            sidebar.add(lblAdmin);
-
-            sidebar.add(crearBotonMenu("👆 Registrar Huella", e -> abrirRegistroHuella()));
-            sidebar.add(crearBotonMenu("📸 Registrar Rostro", e -> abrirRegistroRostro()));
-            sidebar.add(crearBotonMenu("👥 Gestión Empleados", e -> {
+            menu.add(Box.createRigidArea(new Dimension(0, 10)));
+            menu.add(crearEtiquetaSeccion("ADMINISTRACIÓN"));
+            menu.add(crearBotonMenu("Registrar Huella", e -> abrirRegistroHuella()));
+            menu.add(crearBotonMenu("Registrar Rostro", e -> abrirRegistroRostro()));
+            menu.add(crearBotonMenu("Gestión de Empleados", e -> {
                 actualizarTablaEmpleados();
                 cardLayout.show(panelContenido, "GESTION_EMPLEADOS");
             }));
         }
 
-        JLabel lblAsist = new JLabel("  OPERACIONES");
-        lblAsist.setFont(new Font("Segoe UI", Font.BOLD, 10));
-        lblAsist.setForeground(COLOR_TEXTO_SEC);
-        lblAsist.setAlignmentX(Component.LEFT_ALIGNMENT);
-        lblAsist.setBorder(BorderFactory.createEmptyBorder(10, 15, 5, 0));
-        sidebar.add(lblAsist);
+        menu.add(Box.createRigidArea(new Dimension(0, 10)));
+        menu.add(crearEtiquetaSeccion("OPERACIONES"));
+        menu.add(crearBotonMenu("Marcar Asistencia", e -> registrarAsistencia()));
+        menu.add(crearBotonMenu("Consultas y Reportes", e -> cardLayout.show(panelContenido, "REPORTES")));
 
-        sidebar.add(crearBotonMenu("⏰ Marcar Asistencia", e -> registrarAsistencia()));
-        sidebar.add(crearBotonMenu("📊 Consultas y Reportes", e -> cardLayout.show(panelContenido, "REPORTES")));
+        menu.add(Box.createVerticalGlue());
+        menu.add(crearBotonMenu("Cerrar Sesión", e -> cerrarSesion()));
 
-        sidebar.add(Box.createVerticalGlue());
-
-        // Botón cerrar sesión
-        sidebar.add(crearSeparador());
-        sidebar.add(crearBotonMenu("🚪 Cerrar Sesión", e -> cerrarSesion()));
-        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        return sidebar;
+        JScrollPane sp = new JScrollPane(menu,
+            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        sp.setPreferredSize(new Dimension(220, 0));
+        sp.setBorder(null);
+        return sp;
     }
 
     /**
-     * Panel de bienvenida con información del sistema.
+     * Panel de bienvenida.
+     * Las estadísticas globales (empleados/huellas) SOLO se muestran al Administrador.
      */
     private JPanel crearPanelBienvenida() {
         JPanel panel = new JPanel();
-        panel.setBackground(COLOR_FONDO);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
+        panel.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
+        panel.setBackground(Color.WHITE);
 
         JLabel lblBienvenida = new JLabel("Bienvenido, " + usuarioActual.getNombre());
-        lblBienvenida.setFont(new Font("Segoe UI", Font.BOLD, 28));
-        lblBienvenida.setForeground(COLOR_TEXTO);
+        lblBienvenida.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        lblBienvenida.setForeground(COLOR_UTA);
         lblBienvenida.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel lblFecha = new JLabel("📅 " + LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM 'de' yyyy")));
+        JLabel lblFecha = new JLabel(LocalDate.now().format(
+            DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM 'de' yyyy")));
         lblFecha.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        lblFecha.setForeground(COLOR_TEXTO_SEC);
+        lblFecha.setForeground(COLOR_GRIS);
         lblFecha.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        // Cards de resumen
-        JPanel cardsPanel = new JPanel(new GridLayout(1, 3, 20, 0));
-        cardsPanel.setOpaque(false);
-        cardsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
-        cardsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        EmpleadoDAO empDAO = new EmpleadoDAO();
-        HuellaDAO hDAO = new HuellaDAO();
-        int totalEmpleados = empDAO.listarTodos().size();
-        int totalHuellas = hDAO.obtenerTodasHuellas().size();
-
-        cardsPanel.add(crearCard("👥", "Empleados Activos", String.valueOf(totalEmpleados), COLOR_ACENTO));
-        cardsPanel.add(crearCard("👆", "Huellas Registradas", String.valueOf(totalHuellas), COLOR_EXITO));
-        cardsPanel.add(crearCard("📋", "Tu Perfil", usuarioActual.getPerfil().name(), COLOR_WARNING));
-
-        JLabel lblInstrucciones = new JLabel("<html><body style='width: 500px'>"
-            + "<h3 style='color:#38bdf8; font-family:Segoe UI;'>Instrucciones de Uso del Sistema</h3>"
-            + "<p style='color:#e2e8f0; font-size:12px; line-height:1.6;'>"
-            + "Este sistema le permite registrar y consultar de forma exacta los horarios de entrada y salida, "
-            + "así como gestionar el personal y visualizar reportes detallados con cálculo automático de sueldos.<br><br>"
-            + "<b>⏰ Control de Asistencias Oficial:</b><br>"
-            + "• Entrada Mañana: 08:00 AM a 13:00 PM<br>"
-            + "• Almuerzo (obligatorio libre): 13:00 PM a 14:00 PM<br>"
-            + "• Entrada Tarde: 14:00 PM a 17:00 PM<br>"
-            + "• Total Horas Diarias: 8 horas.<br><br>"
-            + "<b>💡 Compensación y Descuentos:</b><br>"
-            + "• Empleado Tiempo Completo: Sueldo mensual fijo de $1500. Se descuentan 20 centavos ($0.20) por cada minuto de atraso en los ingresos.<br>"
-            + "• Empleado Tiempo Parcial: Se le pagan $5.00 por hora laborada (minutos ajustados proporcionalmente) sin superar 8 horas diarias de labor."
-            + "</p></body></html>");
-        lblInstrucciones.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         panel.add(lblBienvenida);
         panel.add(Box.createRigidArea(new Dimension(0, 5)));
         panel.add(lblFecha);
-        panel.add(Box.createRigidArea(new Dimension(0, 30)));
-        panel.add(cardsPanel);
-        panel.add(Box.createRigidArea(new Dimension(0, 30)));
+        panel.add(Box.createRigidArea(new Dimension(0, 25)));
+
+        // Estadísticas globales: exclusivas del Administrador
+        if (usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR) {
+            int totalEmpleados = new EmpleadoDAO().listarTodos().size();
+            int totalHuellas = new HuellaDAO().obtenerTodasHuellas().size();
+
+            JPanel cards = new JPanel(new GridLayout(1, 2, 20, 0));
+            cards.setOpaque(false);
+            cards.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
+            cards.setAlignmentX(Component.LEFT_ALIGNMENT);
+            cards.add(crearTarjetaResumen("Empleados Activos", String.valueOf(totalEmpleados)));
+            cards.add(crearTarjetaResumen("Huellas Registradas", String.valueOf(totalHuellas)));
+
+            panel.add(cards);
+            panel.add(Box.createRigidArea(new Dimension(0, 25)));
+        }
+
+        JLabel lblInstrucciones = new JLabel("<html><body style='width: 600px'>"
+            + "<h3 style='color:#7a001e; font-family:Segoe UI;'>Instrucciones de Uso del Sistema</h3>"
+            + "<p style='font-size:12px; line-height:1.6;'>"
+            + "Este sistema le permite registrar y consultar de forma exacta los horarios de entrada y "
+            + "salida, así como visualizar reportes detallados con cálculo automático de sueldos.<br><br>"
+            + "<b>Control de Asistencias Oficial:</b><br>"
+            + "&bull; Entrada Mañana: 08:00 a 13:00<br>"
+            + "&bull; Almuerzo (libre): 13:00 a 14:00<br>"
+            + "&bull; Entrada Tarde: 14:00 a 17:00<br>"
+            + "&bull; Total Horas Diarias: 8 horas.<br><br>"
+            + "<b>Compensación y Descuentos:</b><br>"
+            + "&bull; Tiempo Completo: sueldo mensual fijo de $1500. Se descuentan $0.20 por cada minuto "
+            + "de atraso en los ingresos.<br>"
+            + "&bull; Tiempo Parcial: $5.00 por hora laborada, sin superar 8 horas diarias."
+            + "</p></body></html>");
+        lblInstrucciones.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         panel.add(lblInstrucciones);
         panel.add(Box.createVerticalGlue());
 
@@ -270,32 +250,24 @@ public class PanelPrincipalFrame extends JFrame {
     }
 
     /**
-     * Panel unificado de Gestión de Empleados (CRUD completo).
+     * Panel unificado de Gestión de Empleados (CRUD completo). Solo Administrador.
      */
     private JPanel crearPanelGestionEmpleados() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(COLOR_FONDO);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        panel.setBackground(Color.WHITE);
 
-        // Título del Panel
-        JLabel lblTitulo = new JLabel("👥 Gestión Integral de Empleados");
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblTitulo.setForeground(COLOR_TEXTO);
-        lblTitulo.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
-        panel.add(lblTitulo, BorderLayout.NORTH);
+        panel.add(crearTituloSeccion("Gestión Integral de Empleados"), BorderLayout.NORTH);
 
-        // --- Panel Central Izquierda: Tabla y Buscador ---
-        JPanel panelIzquierda = new JPanel(new BorderLayout(0, 10));
+        // --- Izquierda: buscador + tabla ---
+        JPanel panelIzquierda = new JPanel(new BorderLayout(0, 8));
         panelIzquierda.setOpaque(false);
 
-        // Buscador
-        JPanel panelBuscador = new JPanel(new BorderLayout(10, 0));
+        JPanel panelBuscador = new JPanel(new BorderLayout(8, 0));
         panelBuscador.setOpaque(false);
-        JLabel lblBuscar = new JLabel("🔍 Buscar:");
+        JLabel lblBuscar = new JLabel("Buscar:");
         lblBuscar.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        lblBuscar.setForeground(COLOR_TEXTO_SEC);
-        txtCrudBuscar = crearCampo("Cédula o Nombre...");
-        txtCrudBuscar.setPreferredSize(new Dimension(200, 32));
+        txtCrudBuscar = new JTextField();
         txtCrudBuscar.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
@@ -306,7 +278,6 @@ public class PanelPrincipalFrame extends JFrame {
         panelBuscador.add(txtCrudBuscar, BorderLayout.CENTER);
         panelIzquierda.add(panelBuscador, BorderLayout.NORTH);
 
-        // Tabla
         String[] columnas = {"Cédula", "Nombre", "Apellido", "Cargo", "Tipo Contrato"};
         DefaultTableModel model = new DefaultTableModel(columnas, 0) {
             @Override
@@ -315,423 +286,334 @@ public class PanelPrincipalFrame extends JFrame {
             }
         };
         tablaEmpleados = new JTable(model);
-        tablaEmpleados.setBackground(COLOR_PANEL);
-        tablaEmpleados.setForeground(COLOR_TEXTO);
-        tablaEmpleados.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        tablaEmpleados.setGridColor(COLOR_PANEL_CLARO);
-        tablaEmpleados.setRowHeight(30);
-        tablaEmpleados.getTableHeader().setBackground(COLOR_PANEL_CLARO);
-        tablaEmpleados.getTableHeader().setForeground(COLOR_TEXTO);
-        tablaEmpleados.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        estilizarTabla(tablaEmpleados);
         tablaEmpleados.getSelectionModel().addListSelectionListener(e -> {
-            int selectedRow = tablaEmpleados.getSelectedRow();
-            if (selectedRow >= 0) {
-                txtCrudCedula.setText((String) tablaEmpleados.getValueAt(selectedRow, 0));
+            int fila = tablaEmpleados.getSelectedRow();
+            if (fila >= 0) {
+                txtCrudCedula.setText((String) tablaEmpleados.getValueAt(fila, 0));
                 txtCrudCedula.setEditable(false); // No editar la cédula (clave única)
-                txtCrudNombre.setText((String) tablaEmpleados.getValueAt(selectedRow, 1));
-                txtCrudApellido.setText((String) tablaEmpleados.getValueAt(selectedRow, 2));
-                txtCrudCargo.setText((String) tablaEmpleados.getValueAt(selectedRow, 3));
-                cmbCrudTipoContrato.setSelectedItem((String) tablaEmpleados.getValueAt(selectedRow, 4));
+                txtCrudNombre.setText((String) tablaEmpleados.getValueAt(fila, 1));
+                txtCrudApellido.setText((String) tablaEmpleados.getValueAt(fila, 2));
+                txtCrudCargo.setText((String) tablaEmpleados.getValueAt(fila, 3));
+                cmbCrudTipoContrato.setSelectedItem((String) tablaEmpleados.getValueAt(fila, 4));
             }
         });
+        panelIzquierda.add(new JScrollPane(tablaEmpleados), BorderLayout.CENTER);
 
-        JScrollPane scroll = new JScrollPane(tablaEmpleados);
-        scroll.getViewport().setBackground(COLOR_PANEL);
-        scroll.setBorder(BorderFactory.createLineBorder(COLOR_PANEL_CLARO));
-        panelIzquierda.add(scroll, BorderLayout.CENTER);
-
-        // --- Panel Central Derecha: Formulario CRUD ---
+        // --- Derecha: formulario CRUD ---
         JPanel panelDerecha = new JPanel();
-        panelDerecha.setBackground(COLOR_PANEL);
-        panelDerecha.setPreferredSize(new Dimension(320, 0));
         panelDerecha.setLayout(new BoxLayout(panelDerecha, BoxLayout.Y_AXIS));
-        panelDerecha.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        panelDerecha.setPreferredSize(new Dimension(300, 0));
+        panelDerecha.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(COLOR_UTA), "Formulario de Datos"));
+        panelDerecha.setBackground(Color.WHITE);
 
-        JLabel lblSub = new JLabel("Formulario de Datos");
-        lblSub.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblSub.setForeground(COLOR_ACENTO);
-        lblSub.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        txtCrudCedula = crearCampo("Cédula");
-        txtCrudNombre = crearCampo("Nombre");
-        txtCrudApellido = crearCampo("Apellido");
-        txtCrudCargo = crearCampo("Cargo");
-
+        txtCrudCedula = new JTextField();
+        txtCrudNombre = new JTextField();
+        txtCrudApellido = new JTextField();
+        txtCrudCargo = new JTextField();
         cmbCrudTipoContrato = new JComboBox<>(new String[]{"TIEMPO_COMPLETO", "TIEMPO_PARCIAL"});
-        cmbCrudTipoContrato.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        cmbCrudTipoContrato.setBackground(COLOR_FONDO);
-        cmbCrudTipoContrato.setForeground(COLOR_TEXTO);
-        cmbCrudTipoContrato.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        cmbCrudTipoContrato.setAlignmentX(Component.LEFT_ALIGNMENT);
+        limitarAltura(txtCrudCedula, txtCrudNombre, txtCrudApellido, txtCrudCargo);
+        limitarAltura(cmbCrudTipoContrato);
 
         lblCrudResultado = new JLabel(" ");
         lblCrudResultado.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        lblCrudResultado.setForeground(COLOR_TEXTO_SEC);
         lblCrudResultado.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Botones de acción
-        JPanel panelBotones = new JPanel(new GridLayout(3, 1, 0, 8));
-        panelBotones.setOpaque(false);
-        panelBotones.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
-        panelBotones.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton btnGuardar = crearBotonAccion("💾 Registrar Nuevo", COLOR_ACENTO);
+        JButton btnGuardar = new JButton("Registrar Nuevo");
         btnGuardar.addActionListener(e -> crudRegistrar());
-
-        JButton btnModificar = crearBotonAccion("✏️ Modificar Seleccionado", COLOR_EXITO);
+        JButton btnModificar = new JButton("Modificar Seleccionado");
         btnModificar.addActionListener(e -> crudModificar());
-
-        JButton btnEliminar = crearBotonAccion("❌ Eliminar / Dar de Baja", COLOR_ERROR);
+        JButton btnEliminar = new JButton("Eliminar / Dar de Baja");
         btnEliminar.addActionListener(e -> crudEliminar());
-
-        panelBotones.add(btnGuardar);
-        panelBotones.add(btnModificar);
-        panelBotones.add(btnEliminar);
-
-        JButton btnLimpiar = crearBotonAccion("🧹 Limpiar Campos", COLOR_PANEL_CLARO);
+        JButton btnLimpiar = new JButton("Limpiar Campos");
         btnLimpiar.addActionListener(e -> limpiarCamposCrud());
+        for (JButton b : new JButton[]{btnGuardar, btnModificar, btnEliminar, btnLimpiar}) {
+            b.setAlignmentX(Component.LEFT_ALIGNMENT);
+            b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        }
 
-        panelDerecha.add(lblSub);
-        panelDerecha.add(Box.createRigidArea(new Dimension(0, 15)));
         panelDerecha.add(crearLabel("Cédula *"));
         panelDerecha.add(txtCrudCedula);
-        panelDerecha.add(Box.createRigidArea(new Dimension(0, 8)));
+        panelDerecha.add(Box.createRigidArea(new Dimension(0, 6)));
         panelDerecha.add(crearLabel("Nombre *"));
         panelDerecha.add(txtCrudNombre);
-        panelDerecha.add(Box.createRigidArea(new Dimension(0, 8)));
+        panelDerecha.add(Box.createRigidArea(new Dimension(0, 6)));
         panelDerecha.add(crearLabel("Apellido *"));
         panelDerecha.add(txtCrudApellido);
-        panelDerecha.add(Box.createRigidArea(new Dimension(0, 8)));
+        panelDerecha.add(Box.createRigidArea(new Dimension(0, 6)));
         panelDerecha.add(crearLabel("Cargo"));
         panelDerecha.add(txtCrudCargo);
-        panelDerecha.add(Box.createRigidArea(new Dimension(0, 8)));
+        panelDerecha.add(Box.createRigidArea(new Dimension(0, 6)));
         panelDerecha.add(crearLabel("Tipo Contrato"));
         panelDerecha.add(cmbCrudTipoContrato);
-        panelDerecha.add(Box.createRigidArea(new Dimension(0, 15)));
-        panelDerecha.add(panelBotones);
-        panelDerecha.add(Box.createRigidArea(new Dimension(0, 8)));
+        panelDerecha.add(Box.createRigidArea(new Dimension(0, 12)));
+        panelDerecha.add(btnGuardar);
+        panelDerecha.add(Box.createRigidArea(new Dimension(0, 5)));
+        panelDerecha.add(btnModificar);
+        panelDerecha.add(Box.createRigidArea(new Dimension(0, 5)));
+        panelDerecha.add(btnEliminar);
+        panelDerecha.add(Box.createRigidArea(new Dimension(0, 5)));
         panelDerecha.add(btnLimpiar);
         panelDerecha.add(Box.createRigidArea(new Dimension(0, 10)));
         panelDerecha.add(lblCrudResultado);
+        panelDerecha.add(Box.createVerticalGlue());
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, panelIzquierda, panelDerecha);
-        splitPane.setOpaque(false);
-        splitPane.setDividerLocation(580);
-        splitPane.setDividerSize(5);
-        panel.add(splitPane, BorderLayout.CENTER);
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, panelIzquierda, panelDerecha);
+        split.setDividerLocation(560);
+        split.setResizeWeight(1.0);
+        panel.add(split, BorderLayout.CENTER);
 
         actualizarTablaEmpleados();
         return panel;
     }
 
     /**
-     * Panel de consultas e informes mensuales/por fechas.
+     * Panel de consultas e informes con pestañas.
      */
     private JPanel crearPanelReportes() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(COLOR_FONDO);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        panel.setBackground(Color.WHITE);
 
-        JLabel lblTitulo = new JLabel("📊 Módulo de Consultas e Informes Financieros");
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblTitulo.setForeground(COLOR_TEXTO);
-        lblTitulo.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
-        panel.add(lblTitulo, BorderLayout.NORTH);
+        panel.add(crearTituloSeccion("Módulo de Consultas e Informes Financieros"), BorderLayout.NORTH);
 
-        // JTabbedPane Premium
-        JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        tabbedPane.setBackground(COLOR_PANEL);
-        tabbedPane.setForeground(COLOR_TEXTO);
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        tabs.addTab("Tiempo Completo", crearSubPanelReporteTC());
+        tabs.addTab("Tiempo Parcial", crearSubPanelReporteTP());
+        tabs.addTab("Asistencias por Rango", crearSubPanelAsistenciasFechas());
 
-        tabbedPane.addTab("💼 Tiempo Completo", crearSubPanelReporteTC());
-        tabbedPane.addTab("⏳ Tiempo Parcial", crearSubPanelReporteTP());
-        tabbedPane.addTab("📅 Asistencias por Rango", crearSubPanelAsistenciasFechas());
-
-        panel.add(tabbedPane, BorderLayout.CENTER);
+        panel.add(tabs, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel crearSubPanelReporteTC() {
-        JPanel panel = new JPanel(new BorderLayout(0, 15));
-        panel.setBackground(COLOR_PANEL);
-        panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBackground(Color.WHITE);
 
-        // Buscador superior
-        JPanel panelSuperior = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
+        JPanel panelSuperior = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panelSuperior.setOpaque(false);
 
-        JTextField txtCedulaReport = crearCampo("Ingresar Cédula");
-        txtCedulaReport.setPreferredSize(new Dimension(150, 32));
-        if (usuarioActual.getPerfil() == Usuario.Perfil.EMPLEADO) {
-            txtCedulaReport.setText(usuarioActual.getCedula());
-            txtCedulaReport.setEditable(false);
-        }
+        JComboBox<String> cmbCedula = new JComboBox<>();
+        cmbCedula.setPreferredSize(new Dimension(220, 28));
+        prepararComboCedulas(cmbCedula, Empleado.TipoContrato.TIEMPO_COMPLETO);
 
-        JComboBox<String> cmbMes = new JComboBox<>(new String[]{
-            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-        });
-        cmbMes.setBackground(COLOR_FONDO);
-        cmbMes.setForeground(COLOR_TEXTO);
+        JComboBox<String> cmbMes = new JComboBox<>(MESES);
+        JComboBox<String> cmbAnio = new JComboBox<>(ANIOS);
+        JButton btnGenerar = new JButton("Generar Reporte");
+        JButton btnImprimir = new JButton("Imprimir");
+        btnImprimir.setEnabled(false);
 
-        JComboBox<String> cmbAnio = new JComboBox<>(new String[]{"2026", "2027", "2028"});
-        cmbAnio.setBackground(COLOR_FONDO);
-        cmbAnio.setForeground(COLOR_TEXTO);
-
-        JButton btnGenerar = crearBotonAccion("🔍 Generar Reporte", COLOR_ACENTO);
-        btnGenerar.setPreferredSize(new Dimension(160, 32));
-
-        panelSuperior.add(crearLabel("Cédula:"));
-        panelSuperior.add(txtCedulaReport);
-        panelSuperior.add(crearLabel("Mes:"));
+        panelSuperior.add(new JLabel("Empleado:"));
+        panelSuperior.add(cmbCedula);
+        panelSuperior.add(new JLabel("Mes:"));
         panelSuperior.add(cmbMes);
-        panelSuperior.add(crearLabel("Año:"));
+        panelSuperior.add(new JLabel("Año:"));
         panelSuperior.add(cmbAnio);
         panelSuperior.add(btnGenerar);
-
+        panelSuperior.add(btnImprimir);
         panel.add(panelSuperior, BorderLayout.NORTH);
 
-        // Tabla de reporte diario
         String[] columnas = {"Fecha", "Ent. Mañana", "Sal. Mañana", "Ent. Tarde", "Sal. Tarde", "Atraso (min)", "Descuento ($)"};
         DefaultTableModel model = new DefaultTableModel(columnas, 0);
         JTable tabla = new JTable(model);
-        tabla.setBackground(COLOR_FONDO);
-        tabla.setForeground(COLOR_TEXTO);
-        tabla.setGridColor(COLOR_PANEL_CLARO);
-        tabla.setRowHeight(25);
-        tabla.getTableHeader().setBackground(COLOR_PANEL_CLARO);
-        tabla.getTableHeader().setForeground(COLOR_TEXTO);
+        estilizarTabla(tabla);
+        panel.add(new JScrollPane(tabla), BorderLayout.CENTER);
 
-        JScrollPane scroll = new JScrollPane(tabla);
-        scroll.getViewport().setBackground(COLOR_FONDO);
-        panel.add(scroll, BorderLayout.CENTER);
-
-        // Panel inferior de métricas acumuladas
-        JPanel panelMetricas = new JPanel(new GridLayout(1, 4, 15, 0));
+        // Métricas: inician vacías hasta generar un reporte válido
+        JPanel panelMetricas = new JPanel(new GridLayout(1, 4, 12, 0));
         panelMetricas.setOpaque(false);
-        panelMetricas.setPreferredSize(new Dimension(0, 80));
-
-        JPanel cardBase = crearCardMini("Sueldo Base", "$1500.00", COLOR_ACENTO);
-        JPanel cardAtraso = crearCardMini("Total Atrasos", "0 min", COLOR_WARNING);
-        JPanel cardDescuento = crearCardMini("Descuentos", "$0.00", COLOR_ERROR);
-        JPanel cardNeto = crearCardMini("Sueldo Neto a Recibir", "$1500.00", COLOR_EXITO);
-
-        panelMetricas.add(cardBase);
-        panelMetricas.add(cardAtraso);
-        panelMetricas.add(cardDescuento);
-        panelMetricas.add(cardNeto);
-
+        panelMetricas.setPreferredSize(new Dimension(0, 70));
+        JLabel valBase = new JLabel("—", SwingConstants.CENTER);
+        JLabel valAtraso = new JLabel("—", SwingConstants.CENTER);
+        JLabel valDescuento = new JLabel("—", SwingConstants.CENTER);
+        JLabel valNeto = new JLabel("—", SwingConstants.CENTER);
+        panelMetricas.add(crearTarjetaMetrica("Sueldo Base", valBase, COLOR_UTA));
+        panelMetricas.add(crearTarjetaMetrica("Total Atrasos", valAtraso, new Color(180, 120, 0)));
+        panelMetricas.add(crearTarjetaMetrica("Descuentos", valDescuento, COLOR_ERROR));
+        panelMetricas.add(crearTarjetaMetrica("Sueldo Neto", valNeto, COLOR_EXITO));
         panel.add(panelMetricas, BorderLayout.SOUTH);
 
-        // Lógica de generación del reporte
+        // Al cambiar de empleado se limpian los resultados previos
+        cmbCedula.addActionListener(e -> {
+            model.setRowCount(0);
+            valBase.setText("—");
+            valAtraso.setText("—");
+            valDescuento.setText("—");
+            valNeto.setText("—");
+            btnImprimir.setEnabled(false);
+        });
+
         btnGenerar.addActionListener(e -> {
-            String cedula = txtCedulaReport.getText().trim();
-            if (cedula.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Debe ingresar una cédula", "Error", JOptionPane.ERROR_MESSAGE);
+            String cedula = extraerCedula(cmbCedula.getSelectedItem());
+            if (cedula == null) {
+                JOptionPane.showMessageDialog(this, "Debe seleccionar un empleado.", "Aviso", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-
             Empleado emp = new EmpleadoDAO().buscarPorCedula(cedula);
             if (emp == null || emp.getTipoContrato() != Empleado.TipoContrato.TIEMPO_COMPLETO) {
-                JOptionPane.showMessageDialog(this, "Empleado no encontrado o no es de Tiempo Completo", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Empleado no encontrado o no es de Tiempo Completo.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             int mesNum = cmbMes.getSelectedIndex() + 1;
             int anioNum = Integer.parseInt((String) cmbAnio.getSelectedItem());
-
             LocalDate inicioMes = LocalDate.of(anioNum, mesNum, 1);
             LocalDate finMes = inicioMes.withDayOfMonth(inicioMes.lengthOfMonth());
 
-            java.util.List<RegistroAsistencia> registros = new AsistenciaDAO().listarPorCedulaYRango(cedula, inicioMes, finMes);
+            List<RegistroAsistencia> registros = new AsistenciaDAO().listarPorCedulaYRango(cedula, inicioMes, finMes);
             model.setRowCount(0);
-
             int totalAtraso = 0;
             for (RegistroAsistencia r : registros) {
                 int atrasoDia = r.getMinutosAtraso();
                 totalAtraso += atrasoDia;
-                double descDia = atrasoDia * 0.20;
-
                 model.addRow(new Object[]{
                     r.getFecha().toString(),
-                    r.getHoraEntradaManana() != null ? r.getHoraEntradaManana().toString() : "—",
-                    r.getHoraSalidaManana() != null ? r.getHoraSalidaManana().toString() : "—",
-                    r.getHoraEntradaTarde() != null ? r.getHoraEntradaTarde().toString() : "—",
-                    r.getHoraSalidaTarde() != null ? r.getHoraSalidaTarde().toString() : "—",
+                    fmt(r.getHoraEntradaManana()), fmt(r.getHoraSalidaManana()),
+                    fmt(r.getHoraEntradaTarde()), fmt(r.getHoraSalidaTarde()),
                     atrasoDia + " min",
-                    String.format("$%.2f", descDia)
+                    String.format("$%.2f", atrasoDia * 0.20)
                 });
             }
-
             double descTotal = totalAtraso * 0.20;
             double sueldoNeto = Math.max(1500.00 - descTotal, 0.00);
-
-            ((JLabel) cardAtraso.getComponent(1)).setText(totalAtraso + " min");
-            ((JLabel) cardDescuento.getComponent(1)).setText(String.format("$%.2f", descTotal));
-            ((JLabel) cardNeto.getComponent(1)).setText(String.format("$%.2f", sueldoNeto));
+            valBase.setText("$1500.00");
+            valAtraso.setText(totalAtraso + " min");
+            valDescuento.setText(String.format("$%.2f", descTotal));
+            valNeto.setText(String.format("$%.2f", sueldoNeto));
+            btnImprimir.setEnabled(true);
         });
+
+        btnImprimir.addActionListener(e -> imprimirTabla(tabla,
+            "Reporte Tiempo Completo - " + cmbCedula.getSelectedItem()));
 
         return panel;
     }
 
     private JPanel crearSubPanelReporteTP() {
-        JPanel panel = new JPanel(new BorderLayout(0, 15));
-        panel.setBackground(COLOR_PANEL);
-        panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBackground(Color.WHITE);
 
-        // Buscador superior
-        JPanel panelSuperior = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
+        JPanel panelSuperior = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panelSuperior.setOpaque(false);
 
-        JTextField txtCedulaReport = crearCampo("Ingresar Cédula");
-        txtCedulaReport.setPreferredSize(new Dimension(150, 32));
-        if (usuarioActual.getPerfil() == Usuario.Perfil.EMPLEADO) {
-            txtCedulaReport.setText(usuarioActual.getCedula());
-            txtCedulaReport.setEditable(false);
-        }
+        JComboBox<String> cmbCedula = new JComboBox<>();
+        cmbCedula.setPreferredSize(new Dimension(220, 28));
+        prepararComboCedulas(cmbCedula, Empleado.TipoContrato.TIEMPO_PARCIAL);
 
-        JComboBox<String> cmbMes = new JComboBox<>(new String[]{
-            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-        });
-        cmbMes.setBackground(COLOR_FONDO);
-        cmbMes.setForeground(COLOR_TEXTO);
+        JComboBox<String> cmbMes = new JComboBox<>(MESES);
+        JComboBox<String> cmbAnio = new JComboBox<>(ANIOS);
+        JButton btnGenerar = new JButton("Generar Reporte");
+        JButton btnImprimir = new JButton("Imprimir");
+        btnImprimir.setEnabled(false);
 
-        JComboBox<String> cmbAnio = new JComboBox<>(new String[]{"2026", "2027", "2028"});
-        cmbAnio.setBackground(COLOR_FONDO);
-        cmbAnio.setForeground(COLOR_TEXTO);
-
-        JButton btnGenerar = crearBotonAccion("🔍 Generar Reporte", COLOR_ACENTO);
-        btnGenerar.setPreferredSize(new Dimension(160, 32));
-
-        panelSuperior.add(crearLabel("Cédula:"));
-        panelSuperior.add(txtCedulaReport);
-        panelSuperior.add(crearLabel("Mes:"));
+        panelSuperior.add(new JLabel("Empleado:"));
+        panelSuperior.add(cmbCedula);
+        panelSuperior.add(new JLabel("Mes:"));
         panelSuperior.add(cmbMes);
-        panelSuperior.add(crearLabel("Año:"));
+        panelSuperior.add(new JLabel("Año:"));
         panelSuperior.add(cmbAnio);
         panelSuperior.add(btnGenerar);
-
+        panelSuperior.add(btnImprimir);
         panel.add(panelSuperior, BorderLayout.NORTH);
 
-        // Tabla de reporte diario
         String[] columnas = {"Fecha", "Ent. Mañana", "Sal. Mañana", "Ent. Tarde", "Sal. Tarde", "Horas Laboradas"};
         DefaultTableModel model = new DefaultTableModel(columnas, 0);
         JTable tabla = new JTable(model);
-        tabla.setBackground(COLOR_FONDO);
-        tabla.setForeground(COLOR_TEXTO);
-        tabla.setGridColor(COLOR_PANEL_CLARO);
-        tabla.setRowHeight(25);
-        tabla.getTableHeader().setBackground(COLOR_PANEL_CLARO);
-        tabla.getTableHeader().setForeground(COLOR_TEXTO);
+        estilizarTabla(tabla);
+        panel.add(new JScrollPane(tabla), BorderLayout.CENTER);
 
-        JScrollPane scroll = new JScrollPane(tabla);
-        scroll.getViewport().setBackground(COLOR_FONDO);
-        panel.add(scroll, BorderLayout.CENTER);
-
-        // Panel inferior de métricas acumuladas
-        JPanel panelMetricas = new JPanel(new GridLayout(1, 3, 15, 0));
+        JPanel panelMetricas = new JPanel(new GridLayout(1, 3, 12, 0));
         panelMetricas.setOpaque(false);
-        panelMetricas.setPreferredSize(new Dimension(0, 80));
-
-        JPanel cardHoras = crearCardMini("Total Horas Trabajadas", "0.0 hrs", COLOR_ACENTO);
-        JPanel cardTarifa = crearCardMini("Tarifa por Hora", "$5.00", COLOR_WARNING);
-        JPanel cardNeto = crearCardMini("Sueldo a Recibir", "$0.00", COLOR_EXITO);
-
-        panelMetricas.add(cardHoras);
-        panelMetricas.add(cardTarifa);
-        panelMetricas.add(cardNeto);
-
+        panelMetricas.setPreferredSize(new Dimension(0, 70));
+        JLabel valHoras = new JLabel("—", SwingConstants.CENTER);
+        JLabel valTarifa = new JLabel("—", SwingConstants.CENTER);
+        JLabel valNeto = new JLabel("—", SwingConstants.CENTER);
+        panelMetricas.add(crearTarjetaMetrica("Total Horas", valHoras, COLOR_UTA));
+        panelMetricas.add(crearTarjetaMetrica("Tarifa por Hora", valTarifa, new Color(180, 120, 0)));
+        panelMetricas.add(crearTarjetaMetrica("Sueldo a Recibir", valNeto, COLOR_EXITO));
         panel.add(panelMetricas, BorderLayout.SOUTH);
 
-        // Lógica de generación del reporte
+        cmbCedula.addActionListener(e -> {
+            model.setRowCount(0);
+            valHoras.setText("—");
+            valTarifa.setText("—");
+            valNeto.setText("—");
+            btnImprimir.setEnabled(false);
+        });
+
         btnGenerar.addActionListener(e -> {
-            String cedula = txtCedulaReport.getText().trim();
-            if (cedula.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Debe ingresar una cédula", "Error", JOptionPane.ERROR_MESSAGE);
+            String cedula = extraerCedula(cmbCedula.getSelectedItem());
+            if (cedula == null) {
+                JOptionPane.showMessageDialog(this, "Debe seleccionar un empleado.", "Aviso", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-
             Empleado emp = new EmpleadoDAO().buscarPorCedula(cedula);
             if (emp == null || emp.getTipoContrato() != Empleado.TipoContrato.TIEMPO_PARCIAL) {
-                JOptionPane.showMessageDialog(this, "Empleado no encontrado o no es de Tiempo Parcial", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Empleado no encontrado o no es de Tiempo Parcial.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             int mesNum = cmbMes.getSelectedIndex() + 1;
             int anioNum = Integer.parseInt((String) cmbAnio.getSelectedItem());
-
             LocalDate inicioMes = LocalDate.of(anioNum, mesNum, 1);
             LocalDate finMes = inicioMes.withDayOfMonth(inicioMes.lengthOfMonth());
 
-            java.util.List<RegistroAsistencia> registros = new AsistenciaDAO().listarPorCedulaYRango(cedula, inicioMes, finMes);
+            List<RegistroAsistencia> registros = new AsistenciaDAO().listarPorCedulaYRango(cedula, inicioMes, finMes);
             model.setRowCount(0);
-
             double totalHoras = 0;
             for (RegistroAsistencia r : registros) {
                 double horasDia = r.calcularHorasTrabajadas();
                 totalHoras += horasDia;
-
                 model.addRow(new Object[]{
                     r.getFecha().toString(),
-                    r.getHoraEntradaManana() != null ? r.getHoraEntradaManana().toString() : "—",
-                    r.getHoraSalidaManana() != null ? r.getHoraSalidaManana().toString() : "—",
-                    r.getHoraEntradaTarde() != null ? r.getHoraEntradaTarde().toString() : "—",
-                    r.getHoraSalidaTarde() != null ? r.getHoraSalidaTarde().toString() : "—",
+                    fmt(r.getHoraEntradaManana()), fmt(r.getHoraSalidaManana()),
+                    fmt(r.getHoraEntradaTarde()), fmt(r.getHoraSalidaTarde()),
                     String.format("%.2f hrs", horasDia)
                 });
             }
-
-            double sueldoTotal = totalHoras * 5.00;
-
-            ((JLabel) cardHoras.getComponent(1)).setText(String.format("%.2f hrs", totalHoras));
-            ((JLabel) cardNeto.getComponent(1)).setText(String.format("$%.2f", sueldoTotal));
+            valHoras.setText(String.format("%.2f hrs", totalHoras));
+            valTarifa.setText("$5.00");
+            valNeto.setText(String.format("$%.2f", totalHoras * 5.00));
+            btnImprimir.setEnabled(true);
         });
+
+        btnImprimir.addActionListener(e -> imprimirTabla(tabla,
+            "Reporte Tiempo Parcial - " + cmbCedula.getSelectedItem()));
 
         return panel;
     }
 
     private JPanel crearSubPanelAsistenciasFechas() {
-        JPanel panel = new JPanel(new BorderLayout(0, 15));
-        panel.setBackground(COLOR_PANEL);
-        panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBackground(Color.WHITE);
 
-        // Buscador superior
-        JPanel panelSuperior = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
+        JPanel panelSuperior = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panelSuperior.setOpaque(false);
 
-        JTextField txtFechaInicio = crearCampo(LocalDate.now().minusDays(7).toString());
-        txtFechaInicio.setPreferredSize(new Dimension(120, 32));
+        JTextField txtFechaInicio = new JTextField(LocalDate.now().minusDays(7).toString(), 10);
+        JTextField txtFechaFin = new JTextField(LocalDate.now().toString(), 10);
+        JButton btnConsultar = new JButton("Consultar Rango");
+        JButton btnImprimir = new JButton("Imprimir");
+        btnImprimir.setEnabled(false);
 
-        JTextField txtFechaFin = crearCampo(LocalDate.now().toString());
-        txtFechaFin.setPreferredSize(new Dimension(120, 32));
-
-        JButton btnConsultar = crearBotonAccion("🔍 Consultar Rango", COLOR_ACENTO);
-        btnConsultar.setPreferredSize(new Dimension(160, 32));
-
-        panelSuperior.add(crearLabel("Fecha Inicio (YYYY-MM-DD):"));
+        panelSuperior.add(new JLabel("Fecha Inicio (AAAA-MM-DD):"));
         panelSuperior.add(txtFechaInicio);
-        panelSuperior.add(crearLabel("Fecha Fin (YYYY-MM-DD):"));
+        panelSuperior.add(new JLabel("Fecha Fin (AAAA-MM-DD):"));
         panelSuperior.add(txtFechaFin);
         panelSuperior.add(btnConsultar);
-
+        panelSuperior.add(btnImprimir);
         panel.add(panelSuperior, BorderLayout.NORTH);
 
-        // Tabla de asistencias
         String[] columnas = {"Empleado", "Cédula", "Fecha", "Ent. Mañana", "Sal. Mañana", "Ent. Tarde", "Sal. Tarde"};
         DefaultTableModel model = new DefaultTableModel(columnas, 0);
         JTable tabla = new JTable(model);
-        tabla.setBackground(COLOR_FONDO);
-        tabla.setForeground(COLOR_TEXTO);
-        tabla.setGridColor(COLOR_PANEL_CLARO);
-        tabla.setRowHeight(25);
-        tabla.getTableHeader().setBackground(COLOR_PANEL_CLARO);
-        tabla.getTableHeader().setForeground(COLOR_TEXTO);
-
-        JScrollPane scroll = new JScrollPane(tabla);
-        scroll.getViewport().setBackground(COLOR_FONDO);
-        panel.add(scroll, BorderLayout.CENTER);
+        estilizarTabla(tabla);
+        panel.add(new JScrollPane(tabla), BorderLayout.CENTER);
 
         btnConsultar.addActionListener(e -> {
             try {
@@ -741,7 +623,7 @@ public class PanelPrincipalFrame extends JFrame {
                 AsistenciaDAO asistDAO = new AsistenciaDAO();
                 EmpleadoDAO empDAO = new EmpleadoDAO();
 
-                java.util.List<RegistroAsistencia> registros;
+                List<RegistroAsistencia> registros;
                 if (usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR) {
                     registros = asistDAO.listarTodosPorRango(desde, hasta);
                 } else {
@@ -749,309 +631,26 @@ public class PanelPrincipalFrame extends JFrame {
                 }
 
                 model.setRowCount(0);
-
                 for (RegistroAsistencia r : registros) {
                     Empleado emp = empDAO.buscarPorCedula(r.getCedulaEmpleado());
-                    String nombreEmpleado = emp != null ? emp.getNombreCompleto() : "Desconocido";
-
                     model.addRow(new Object[]{
-                        nombreEmpleado,
+                        emp != null ? emp.getNombreCompleto() : "Desconocido",
                         r.getCedulaEmpleado(),
                         r.getFecha().toString(),
-                        r.getHoraEntradaManana() != null ? r.getHoraEntradaManana().toString() : "—",
-                        r.getHoraSalidaManana() != null ? r.getHoraSalidaManana().toString() : "—",
-                        r.getHoraEntradaTarde() != null ? r.getHoraEntradaTarde().toString() : "—",
-                        r.getHoraSalidaTarde() != null ? r.getHoraSalidaTarde().toString() : "—"
+                        fmt(r.getHoraEntradaManana()), fmt(r.getHoraSalidaManana()),
+                        fmt(r.getHoraEntradaTarde()), fmt(r.getHoraSalidaTarde())
                     });
                 }
+                btnImprimir.setEnabled(model.getRowCount() > 0);
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Formato de fecha inválido. Utilice AAAA-MM-DD", "Error de Formato", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Formato de fecha inválido. Utilice AAAA-MM-DD.", "Error de Formato", JOptionPane.ERROR_MESSAGE);
             }
         });
+
+        btnImprimir.addActionListener(e -> imprimirTabla(tabla, "Reporte de Asistencias por Rango"));
 
         return panel;
     }
-    
-    private JPanel crearPanelActualizarEmpleado() {
-        JPanel panel = new JPanel();
-        panel.setBackground(COLOR_FONDO);
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
-
-        JLabel lblTitulo = new JLabel("✏️ Actualizar Empleado");
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblTitulo.setForeground(COLOR_TEXTO);
-        lblTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JTextField txtCedula = crearCampo("Cédula");
-        JTextField txtNombre = crearCampo("Nombre");
-        JTextField txtApellido = crearCampo("Apellido");
-        JTextField txtCargo = crearCampo("Cargo");
-
-        JComboBox<String> cmbTipo = new JComboBox<>(new String[]{"TIEMPO_COMPLETO", "TIEMPO_PARCIAL"});
-        cmbTipo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        cmbTipo.setBackground(new Color(15, 23, 42));
-        cmbTipo.setForeground(COLOR_TEXTO);
-        cmbTipo.setMaximumSize(new Dimension(400, 40));
-        cmbTipo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
-        JComboBox<String> cmbActivo = new JComboBox<>(new String[]{"ACTIVO", "DESCANSANDO"});
-        cmbActivo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        cmbActivo.setBackground(new Color(15, 23, 42));
-        cmbActivo.setForeground(COLOR_TEXTO);
-        cmbActivo.setMaximumSize(new Dimension(400, 40));
-        cmbActivo.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel lblResultado = new JLabel(" ");
-        lblResultado.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        lblResultado.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton btnBuscar = crearBotonAccion("🔍 Buscar Empleado", COLOR_WARNING);
-        JButton btnActualizar = crearBotonAccion("💾 Actualizar Información", COLOR_ACENTO);
-
-        btnActualizar.setEnabled(false);
-
-        btnBuscar.addActionListener(e -> {
-            String cedula = txtCedula.getText().trim();
-
-            if (cedula.isEmpty()) {
-                lblResultado.setText("❌ Ingrese la cédula del empleado.");
-                lblResultado.setForeground(COLOR_ERROR);
-                return;
-            }
-
-            EmpleadoDAO dao = new EmpleadoDAO();
-            Empleado emp = dao.buscarPorCedula(cedula);
-
-            if (emp == null) {
-                lblResultado.setText("❌ No se encontró un empleado con esa cédula.");
-                lblResultado.setForeground(COLOR_ERROR);
-
-                txtNombre.setText("");
-                txtApellido.setText("");
-                txtCargo.setText("");
-                btnActualizar.setEnabled(false);
-                return;
-            }
-
-            txtNombre.setText(emp.getNombre());
-            txtApellido.setText(emp.getApellido());
-            txtCargo.setText(emp.getCargo());
-            cmbTipo.setSelectedItem(emp.getTipoContrato().name());
-            cmbActivo.setSelectedItem(emp.isActivo() ? "ACTIVO" : "DESCANSANDO");
-            
-            lblResultado.setText("✅ Empleado encontrado. Puede modificar los datos.");
-            lblResultado.setForeground(COLOR_EXITO);
-            btnActualizar.setEnabled(true);
-        });
-
-        btnActualizar.addActionListener(e -> {
-            String cedula = txtCedula.getText().trim();
-            String nombre = txtNombre.getText().trim();
-            String apellido = txtApellido.getText().trim();
-            String cargo = txtCargo.getText().trim();
-
-            if (cedula.isEmpty() || nombre.isEmpty() || apellido.isEmpty()) {
-                lblResultado.setText("❌ Complete los campos obligatorios: cédula, nombre y apellido.");
-                lblResultado.setForeground(COLOR_ERROR);
-                return;
-            }
-
-            Empleado.TipoContrato tipo = Empleado.TipoContrato.valueOf((String) cmbTipo.getSelectedItem());
-
-            Empleado emp;
-            if (tipo == Empleado.TipoContrato.TIEMPO_COMPLETO) {
-                emp = new EmpleadoTiempoCompleto(cedula, nombre, apellido, cargo);
-            } else {
-                emp = new EmpleadoTiempoParcial(cedula, nombre, apellido, cargo);
-            }
-            
-            boolean activo = cmbActivo.getSelectedItem().equals("ACTIVO");
-            emp.setActivo(activo);
-
-            EmpleadoDAO dao = new EmpleadoDAO();
-
-            if (dao.modificar(emp)) {
-                lblResultado.setText("✅ Información del empleado actualizada correctamente.");
-                lblResultado.setForeground(COLOR_EXITO);
-            } else {
-                lblResultado.setText("❌ No se pudo actualizar la información del empleado.");
-                lblResultado.setForeground(COLOR_ERROR);
-            }
-        });
-
-        panel.add(lblTitulo);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
-
-        panel.add(crearLabel("Cédula del empleado *"));
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(txtCedula);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(btnBuscar);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
-
-        panel.add(crearLabel("Nombre *"));
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(txtNombre);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        panel.add(crearLabel("Apellido *"));
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(txtApellido);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        panel.add(crearLabel("Cargo"));
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(txtCargo);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        panel.add(crearLabel("Tipo de Contrato"));
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(cmbTipo);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        panel.add(crearLabel("Estado del empleado"));
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(cmbActivo);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
-
-        panel.add(btnActualizar);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(lblResultado);
-        panel.add(Box.createVerticalGlue());
-
-        return panel;
-    }
-    
-    private JPanel crearPanelEliminarEmpleado() {
-        JPanel panel = new JPanel();
-        panel.setBackground(COLOR_FONDO);
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
-
-        JLabel lblTitulo = new JLabel("🗑️ Eliminar Empleado");
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblTitulo.setForeground(COLOR_TEXTO);
-        lblTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel lblDescripcion = new JLabel(
-            "<html><body style='width: 450px;'>"
-            + "Ingrese la cédula del empleado que desea eliminar. "
-            + "El sistema verificará si existe antes de realizar la eliminación."
-            + "</body></html>"
-        );
-        lblDescripcion.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        lblDescripcion.setForeground(COLOR_TEXTO_SEC);
-        lblDescripcion.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JTextField txtCedula = crearCampo("Cédula");
-
-        JLabel lblDatosEmpleado = new JLabel(" ");
-        lblDatosEmpleado.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        lblDatosEmpleado.setForeground(COLOR_TEXTO_SEC);
-        lblDatosEmpleado.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel lblResultado = new JLabel(" ");
-        lblResultado.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        lblResultado.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton btnBuscar = crearBotonAccion("🔍 Buscar Empleado", COLOR_WARNING);
-        JButton btnEliminar = crearBotonAccion("🗑️ Eliminar Empleado", COLOR_ERROR);
-
-        btnEliminar.setEnabled(false);
-
-        btnBuscar.addActionListener(e -> {
-            String cedula = txtCedula.getText().trim();
-
-            if (cedula.isEmpty()) {
-                lblResultado.setText("❌ Ingrese la cédula del empleado.");
-                lblResultado.setForeground(COLOR_ERROR);
-                lblDatosEmpleado.setText(" ");
-                btnEliminar.setEnabled(false);
-                return;
-            }
-
-            EmpleadoDAO dao = new EmpleadoDAO();
-            Empleado emp = dao.buscarPorCedula(cedula);
-
-            if (emp == null) {
-                lblResultado.setText("❌ No se encontró un empleado con esa cédula.");
-                lblResultado.setForeground(COLOR_ERROR);
-                lblDatosEmpleado.setText(" ");
-                btnEliminar.setEnabled(false);
-                return;
-            }
-
-            lblDatosEmpleado.setText(
-                "<html><body style='width: 450px;'>"
-                + "<b>Empleado encontrado:</b><br>"
-                + "Cédula: " + emp.getCedula() + "<br>"
-                + "Nombre: " + emp.getNombre() + " " + emp.getApellido() + "<br>"
-                + "Cargo: " + emp.getCargo() + "<br>"
-                + "Tipo de contrato: " + emp.getTipoContrato().name()
-                + "</body></html>"
-            );
-
-            lblResultado.setText("✅ Empleado encontrado. Puede eliminarlo si está seguro.");
-            lblResultado.setForeground(COLOR_EXITO);
-            btnEliminar.setEnabled(true);
-        });
-
-        btnEliminar.addActionListener(e -> {
-            String cedula = txtCedula.getText().trim();
-
-            int opcion = JOptionPane.showConfirmDialog(
-                this,
-                "¿Está seguro de eliminar al empleado con cédula " + cedula + "?\n"
-                + "Esta acción eliminará permanentemente al empleado y su huella digital.",
-                "Confirmar eliminación",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
-            );
-
-            if (opcion != JOptionPane.YES_OPTION) {
-                return;
-            }
-
-            EmpleadoDAO dao = new EmpleadoDAO();
-
-            if (dao.eliminar(cedula)) {
-                lblResultado.setText("✅ Empleado eliminado correctamente.");
-                lblResultado.setForeground(COLOR_EXITO);
-
-                txtCedula.setText("");
-                lblDatosEmpleado.setText(" ");
-                btnEliminar.setEnabled(false);
-            } else {
-                lblResultado.setText("❌ No se pudo eliminar el empleado.");
-                lblResultado.setForeground(COLOR_ERROR);
-            }
-        });
-
-        panel.add(lblTitulo);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(lblDescripcion);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
-
-        panel.add(crearLabel("Cédula del empleado *"));
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(txtCedula);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        panel.add(btnBuscar);
-        panel.add(Box.createRigidArea(new Dimension(0, 20)));
-
-        panel.add(lblDatosEmpleado);
-        panel.add(Box.createRigidArea(new Dimension(0, 15)));
-
-        panel.add(btnEliminar);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(lblResultado);
-        panel.add(Box.createVerticalGlue());
-
-        return panel;
-    }
-    
 
     // =============================================
     // CRUD Lógica y Auxiliares
@@ -1061,16 +660,9 @@ public class PanelPrincipalFrame extends JFrame {
         if (tablaEmpleados == null) return;
         DefaultTableModel model = (DefaultTableModel) tablaEmpleados.getModel();
         model.setRowCount(0);
-
-        EmpleadoDAO dao = new EmpleadoDAO();
-        java.util.List<Empleado> lista = dao.listarTodos();
-        for (Empleado e : lista) {
+        for (Empleado e : new EmpleadoDAO().listarTodos()) {
             model.addRow(new Object[]{
-                e.getCedula(),
-                e.getNombre(),
-                e.getApellido(),
-                e.getCargo(),
-                e.getTipoContrato().name()
+                e.getCedula(), e.getNombre(), e.getApellido(), e.getCargo(), e.getTipoContrato().name()
             });
         }
     }
@@ -1078,17 +670,13 @@ public class PanelPrincipalFrame extends JFrame {
     private void filtrarTablaEmpleados(String texto) {
         DefaultTableModel model = (DefaultTableModel) tablaEmpleados.getModel();
         model.setRowCount(0);
-
-        EmpleadoDAO dao = new EmpleadoDAO();
-        java.util.List<Empleado> lista = dao.listarTodos();
-        for (Empleado e : lista) {
-            if (e.getCedula().contains(texto) || e.getNombre().toLowerCase().contains(texto.toLowerCase()) || e.getApellido().toLowerCase().contains(texto.toLowerCase())) {
+        String t = texto.toLowerCase();
+        for (Empleado e : new EmpleadoDAO().listarTodos()) {
+            if (e.getCedula().contains(texto)
+                || e.getNombre().toLowerCase().contains(t)
+                || e.getApellido().toLowerCase().contains(t)) {
                 model.addRow(new Object[]{
-                    e.getCedula(),
-                    e.getNombre(),
-                    e.getApellido(),
-                    e.getCargo(),
-                    e.getTipoContrato().name()
+                    e.getCedula(), e.getNombre(), e.getApellido(), e.getCargo(), e.getTipoContrato().name()
                 });
             }
         }
@@ -1101,32 +689,21 @@ public class PanelPrincipalFrame extends JFrame {
         String cargo = txtCrudCargo.getText().trim();
 
         if (cedula.isEmpty() || nombre.isEmpty() || apellido.isEmpty()) {
-            lblCrudResultado.setText("❌ Complete cédula, nombre y apellido.");
-            lblCrudResultado.setForeground(COLOR_ERROR);
+            mostrarResultadoCrud("Complete cédula, nombre y apellido.", false);
             return;
         }
 
-        Empleado.TipoContrato tipo = Empleado.TipoContrato.valueOf((String) cmbCrudTipoContrato.getSelectedItem());
-        Empleado emp;
-        if (tipo == Empleado.TipoContrato.TIEMPO_COMPLETO) {
-            emp = new EmpleadoTiempoCompleto(cedula, nombre, apellido, cargo);
-        } else {
-            emp = new EmpleadoTiempoParcial(cedula, nombre, apellido, cargo);
-        }
-
+        Empleado emp = construirEmpleado(cedula, nombre, apellido, cargo);
         EmpleadoDAO dao = new EmpleadoDAO();
         if (dao.insertar(emp)) {
             // También crear un usuario para que pueda iniciar sesión
             Usuario user = new Usuario(cedula, nombre + " " + apellido, "clave123", Usuario.Perfil.EMPLEADO);
             new UsuarioDAO().insertar(user);
-
-            lblCrudResultado.setText("✅ Registrado exitosamente (Usuario: " + cedula + ", Clave: clave123)");
-            lblCrudResultado.setForeground(COLOR_EXITO);
+            mostrarResultadoCrud("Registrado (Usuario: " + cedula + ", Clave: clave123)", true);
             limpiarCamposCrud();
             actualizarTablaEmpleados();
         } else {
-            lblCrudResultado.setText("❌ Error. ¿Cédula duplicada?");
-            lblCrudResultado.setForeground(COLOR_ERROR);
+            mostrarResultadoCrud("Error. ¿Cédula duplicada?", false);
         }
     }
 
@@ -1137,52 +714,49 @@ public class PanelPrincipalFrame extends JFrame {
         String cargo = txtCrudCargo.getText().trim();
 
         if (cedula.isEmpty() || nombre.isEmpty() || apellido.isEmpty()) {
-            lblCrudResultado.setText("❌ Seleccione un empleado y complete campos.");
-            lblCrudResultado.setForeground(COLOR_ERROR);
+            mostrarResultadoCrud("Seleccione un empleado y complete los campos.", false);
             return;
         }
 
-        Empleado.TipoContrato tipo = Empleado.TipoContrato.valueOf((String) cmbCrudTipoContrato.getSelectedItem());
-        Empleado emp;
-        if (tipo == Empleado.TipoContrato.TIEMPO_COMPLETO) {
-            emp = new EmpleadoTiempoCompleto(cedula, nombre, apellido, cargo);
-        } else {
-            emp = new EmpleadoTiempoParcial(cedula, nombre, apellido, cargo);
-        }
-
-        EmpleadoDAO dao = new EmpleadoDAO();
-        if (dao.modificar(emp)) {
-            lblCrudResultado.setText("✅ Modificado correctamente.");
-            lblCrudResultado.setForeground(COLOR_EXITO);
+        Empleado emp = construirEmpleado(cedula, nombre, apellido, cargo);
+        if (new EmpleadoDAO().modificar(emp)) {
+            mostrarResultadoCrud("Modificado correctamente.", true);
             limpiarCamposCrud();
             actualizarTablaEmpleados();
         } else {
-            lblCrudResultado.setText("❌ Error al modificar.");
-            lblCrudResultado.setForeground(COLOR_ERROR);
+            mostrarResultadoCrud("Error al modificar.", false);
         }
     }
 
     private void crudEliminar() {
         String cedula = txtCrudCedula.getText().trim();
         if (cedula.isEmpty()) {
-            lblCrudResultado.setText("❌ Seleccione empleado a eliminar.");
-            lblCrudResultado.setForeground(COLOR_ERROR);
+            mostrarResultadoCrud("Seleccione el empleado a eliminar.", false);
             return;
         }
-
         int op = JOptionPane.showConfirmDialog(this, "¿Está seguro de eliminar a este empleado?", "Eliminar", JOptionPane.YES_NO_OPTION);
         if (op == JOptionPane.YES_OPTION) {
-            EmpleadoDAO dao = new EmpleadoDAO();
-            if (dao.eliminar(cedula)) {
-                lblCrudResultado.setText("✅ Empleado dado de baja.");
-                lblCrudResultado.setForeground(COLOR_EXITO);
+            if (new EmpleadoDAO().eliminar(cedula)) {
+                mostrarResultadoCrud("Empleado dado de baja.", true);
                 limpiarCamposCrud();
                 actualizarTablaEmpleados();
             } else {
-                lblCrudResultado.setText("❌ Error al eliminar.");
-                lblCrudResultado.setForeground(COLOR_ERROR);
+                mostrarResultadoCrud("Error al eliminar.", false);
             }
         }
+    }
+
+    private Empleado construirEmpleado(String cedula, String nombre, String apellido, String cargo) {
+        Empleado.TipoContrato tipo = Empleado.TipoContrato.valueOf((String) cmbCrudTipoContrato.getSelectedItem());
+        if (tipo == Empleado.TipoContrato.TIEMPO_COMPLETO) {
+            return new EmpleadoTiempoCompleto(cedula, nombre, apellido, cargo);
+        }
+        return new EmpleadoTiempoParcial(cedula, nombre, apellido, cargo);
+    }
+
+    private void mostrarResultadoCrud(String texto, boolean exito) {
+        lblCrudResultado.setText("<html>" + texto + "</html>");
+        lblCrudResultado.setForeground(exito ? COLOR_EXITO : COLOR_ERROR);
     }
 
     private void limpiarCamposCrud() {
@@ -1222,11 +796,9 @@ public class PanelPrincipalFrame extends JFrame {
     private void abrirRegistroRostro() {
         String cedula = JOptionPane.showInputDialog(this, "Ingrese la cédula del empleado para registrar rostro:", "Registrar Rostro", JOptionPane.QUESTION_MESSAGE);
         if (cedula != null && !cedula.trim().isEmpty()) {
-            EmpleadoDAO dao = new EmpleadoDAO();
-            Empleado emp = dao.buscarPorCedula(cedula.trim());
+            Empleado emp = new EmpleadoDAO().buscarPorCedula(cedula.trim());
             if (emp != null) {
-                RegistroRostroFrame frame = new RegistroRostroFrame(emp);
-                frame.setVisible(true);
+                new RegistroRostroFrame(emp).setVisible(true);
             } else {
                 JOptionPane.showMessageDialog(this, "Empleado no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -1234,25 +806,75 @@ public class PanelPrincipalFrame extends JFrame {
     }
 
     private void registrarAsistencia() {
-        Object[] options = {"Huella Dactilar", "Reconocimiento Facial"};
+        // 1. Determinar la cédula del empleado a marcar
+        String cedula = usuarioActual.getCedula();
+        if (usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR) {
+            String inputCedula = JOptionPane.showInputDialog(this, "Ingrese la cédula del empleado para registrar asistencia:", cedula);
+            if (inputCedula == null || inputCedula.trim().isEmpty()) return;
+            cedula = inputCedula.trim();
+        }
+
+        Empleado emp = new EmpleadoDAO().buscarPorCedula(cedula);
+        if (emp == null) {
+            JOptionPane.showMessageDialog(this, "Empleado con cédula " + cedula + " no registrado o inactivo.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 2. El usuario SELECCIONA qué marcación desea registrar (ANTES de la biometría)
+        AsistenciaDAO asistDAO = new AsistenciaDAO();
+        LocalDate hoy = LocalDate.now();
+        RegistroAsistencia reg = asistDAO.buscarPorCedulaYFecha(cedula, hoy);
+        if (reg == null) {
+            reg = new RegistroAsistencia(cedula);
+        }
+
+        List<String> disponibles = new ArrayList<>();
+        if (reg.getHoraEntradaManana() == null) disponibles.add("Entrada Mañana");
+        if (reg.getHoraEntradaManana() != null && reg.getHoraSalidaManana() == null) disponibles.add("Salida Mañana");
+        if (reg.getHoraEntradaTarde() == null) disponibles.add("Entrada Tarde");
+        if (reg.getHoraEntradaTarde() != null && reg.getHoraSalidaTarde() == null) disponibles.add("Salida Tarde");
+
+        if (disponibles.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Este empleado ya registró todas las marcaciones de hoy.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String sugerida = disponibles.get(0);
+        String marca = (String) JOptionPane.showInputDialog(this,
+            "Empleado: " + emp.getNombreCompleto() + "\n"
+            + "Hora actual: " + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")) + "\n\n"
+            + "Seleccione el tipo de marcación a registrar:",
+            "Paso 1 de 2 - Tipo de Marcación",
+            JOptionPane.QUESTION_MESSAGE, null,
+            disponibles.toArray(), sugerida);
+
+        if (marca == null) return; // El usuario canceló
+
+        // 3. Validación biométrica (DESPUÉS de elegir entrada/salida)
+        Object[] metodos = {"Huella Dactilar", "Reconocimiento Facial"};
         int eleccion = JOptionPane.showOptionDialog(this,
-                "¿Con qué método biométrico desea registrar su asistencia?",
-                "Validación de Asistencia",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null, options, options[0]);
+            "Marcación seleccionada: " + marca + "\n\n"
+            + "Ahora valide su identidad. ¿Con qué método biométrico desea continuar?",
+            "Paso 2 de 2 - Validación Biométrica",
+            JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,
+            null, metodos, metodos[0]);
+
+        if (eleccion == JOptionPane.CLOSED_OPTION) return;
 
         boolean validado = false;
-
         if (eleccion == 0) {
-            // Huella
-            JOptionPane.showMessageDialog(this, "Por favor coloque su dedo en el lector (Implementación en HuellaListener).");
-            // Para propósitos prácticos, aquí asumo que si tienen ZK conectado, la validación se hace asincrónica.
-            // Por ahora, lo dejaré pasar o se podría abrir un dialog de huella.
-            // validado = true; (Se requiere lógica del ZKTeco)
-            validado = true; // Simulamos validación de huella exitosa por ahora.
+            // Validación REAL por huella: requiere que el empleado tenga huella registrada
+            if (!new HuellaDAO().tieneHuella(cedula)) {
+                JOptionPane.showMessageDialog(this,
+                    "Este empleado no tiene una huella registrada.\n"
+                    + "Use el reconocimiento facial o registre su huella primero.",
+                    "Sin huella", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            ValidacionHuellaDialog dialog = new ValidacionHuellaDialog(this, fingerprintManager, cedula, emp.getNombreCompleto());
+            dialog.setVisible(true);
+            validado = dialog.isValidado();
         } else if (eleccion == 1) {
-            // Rostro
             ValidacionRostroDialog dialog = new ValidacionRostroDialog(this, usuarioActual);
             dialog.setVisible(true);
             validado = dialog.isValidado();
@@ -1263,251 +885,237 @@ public class PanelPrincipalFrame extends JFrame {
             return;
         }
 
-        String cedula = usuarioActual.getCedula();
-        
-        // Si es Admin, puede marcar asistencia para sí mismo o para un empleado ingresando su cédula
-        if (usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR) {
-            String inputCedula = JOptionPane.showInputDialog(this, "Ingrese la cédula del empleado para registrar asistencia:", cedula);
-            if (inputCedula == null || inputCedula.trim().isEmpty()) return;
-            cedula = inputCedula.trim();
-        }
-
-        // Verificar que el empleado existe
-        Empleado emp = new EmpleadoDAO().buscarPorCedula(cedula);
-        if (emp == null) {
-            JOptionPane.showMessageDialog(this, "Empleado con cédula " + cedula + " no registrado o inactivo.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
+        // 4. Aplicar la marcación elegida
         LocalTime ahora = LocalTime.now();
-        LocalDate hoy = LocalDate.now();
-
-        AsistenciaDAO asistDAO = new AsistenciaDAO();
-        RegistroAsistencia reg = asistDAO.buscarPorCedulaYFecha(cedula, hoy);
-
-        if (reg == null) {
-            reg = new RegistroAsistencia(cedula);
+        if (marca.equals("Entrada Mañana")) {
+            reg.setHoraEntradaManana(ahora);
+        } else if (marca.equals("Salida Mañana")) {
+            reg.setHoraSalidaManana(ahora);
+        } else if (marca.equals("Entrada Tarde")) {
+            reg.setHoraEntradaTarde(ahora);
+        } else if (marca.equals("Salida Tarde")) {
+            reg.setHoraSalidaTarde(ahora);
         }
-
-        String accion;
-        if (ahora.isBefore(LocalTime.of(13, 0))) {
-            if (reg.getHoraEntradaManana() == null) {
-                reg.setHoraEntradaManana(ahora);
-                accion = "Entrada Mañana: " + ahora.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            } else {
-                reg.setHoraSalidaManana(ahora);
-                accion = "Salida Mañana: " + ahora.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            }
-        } else {
-            if (reg.getHoraEntradaTarde() == null) {
-                reg.setHoraEntradaTarde(ahora);
-                accion = "Entrada Tarde: " + ahora.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            } else if (reg.getHoraSalidaTarde() == null) {
-                reg.setHoraSalidaTarde(ahora);
-                accion = "Salida Tarde: " + ahora.format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "Ya tiene todas las asistencias registradas para hoy.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-        }
-
         reg.calcularMinutosAtraso();
 
         if (asistDAO.registrarAsistencia(reg)) {
             JOptionPane.showMessageDialog(this,
-                "✅ Asistencia registrada:\n" + accion +
-                    (reg.getMinutosAtraso() > 0 ? "\n⚠ Atraso: " + reg.getMinutosAtraso() + " minutos" : ""),
+                "Asistencia registrada correctamente.\n"
+                + marca + ": " + ahora.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
+                + (reg.getMinutosAtraso() > 0 ? "\nAtraso acumulado: " + reg.getMinutosAtraso() + " minutos" : ""),
                 "Asistencia", JOptionPane.INFORMATION_MESSAGE);
         } else {
-            JOptionPane.showMessageDialog(this,
-                "❌ Error al registrar la asistencia.",
-                "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error al registrar la asistencia.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void cerrarSesion() {
-        int opcion = JOptionPane.showConfirmDialog(this,
-            "¿Desea cerrar sesión?", "Confirmar", JOptionPane.YES_NO_OPTION);
+        int opcion = JOptionPane.showConfirmDialog(this, "¿Desea cerrar sesión?", "Confirmar", JOptionPane.YES_NO_OPTION);
         if (opcion == JOptionPane.YES_OPTION) {
             if (fingerprintManager.isActivo()) {
                 fingerprintManager.cerrar();
             }
             if (relojTimer != null) relojTimer.stop();
-
-            LoginFrame login = new LoginFrame();
-            login.setVisible(true);
+            new LoginFrame().setVisible(true);
             this.dispose();
         }
     }
 
     private void iniciarReloj() {
-        relojTimer = new Timer(1000, e -> {
-            lblReloj.setText("🕐 " + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
-                + " — " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-        });
+        relojTimer = new Timer(1000, e -> lblReloj.setText(
+            LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
+            + "  -  " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))));
         relojTimer.start();
     }
 
     // =============================================
-    // UI Helpers
+    // Impresión nativa (sin dependencias externas)
     // =============================================
 
-    private JPanel crearCard(String icono, String titulo, String valor, Color color) {
-        JPanel card = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(COLOR_PANEL);
-                g2d.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 16, 16));
-                g2d.setColor(COLOR_PANEL_CLARO);
-                g2d.draw(new RoundRectangle2D.Float(0, 0, getWidth() - 1, getHeight() - 1, 16, 16));
-                g2d.dispose();
+    /**
+     * Imprime el contenido de una tabla usando el motor de impresión nativo de Java.
+     * Muestra el diálogo del sistema, donde se puede imprimir o guardar como PDF.
+     */
+    private void imprimirTabla(JTable tabla, String titulo) {
+        if (tabla.getRowCount() == 0) {
+            JOptionPane.showMessageDialog(this, "No hay datos para imprimir. Genere primero el reporte.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            MessageFormat encabezado = new MessageFormat(titulo);
+            MessageFormat pie = new MessageFormat("Página {0}");
+            boolean impreso = tabla.print(JTable.PrintMode.FIT_WIDTH, encabezado, pie);
+            if (!impreso) {
+                JOptionPane.showMessageDialog(this, "Impresión cancelada por el usuario.", "Información", JOptionPane.INFORMATION_MESSAGE);
             }
-        };
-        card.setOpaque(false);
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        } catch (PrinterException ex) {
+            JOptionPane.showMessageDialog(this, "Error al imprimir: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
-        JLabel lblIcono = new JLabel(icono + " " + titulo);
-        lblIcono.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblIcono.setForeground(COLOR_TEXTO_SEC);
-        lblIcono.setAlignmentX(Component.LEFT_ALIGNMENT);
+    // =============================================
+    // UI Helpers (Swing nativo)
+    // =============================================
 
-        JLabel lblValor = new JLabel(valor);
-        lblValor.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblValor.setForeground(color);
-        lblValor.setAlignmentX(Component.LEFT_ALIGNMENT);
+    private static final String[] MESES = {
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    };
+    private static final String[] ANIOS = {"2025", "2026", "2027", "2028"};
 
-        card.add(lblIcono);
-        card.add(Box.createRigidArea(new Dimension(0, 8)));
-        card.add(lblValor);
+    private static String fmt(LocalTime t) {
+        return t != null ? t.toString() : "—";
+    }
 
+    /**
+     * Llena un combo con los empleados del tipo indicado. Para el perfil EMPLEADO
+     * solo se ofrece su propia cédula. Se refresca cada vez que se abre el desplegable.
+     */
+    private void prepararComboCedulas(JComboBox<String> combo, Empleado.TipoContrato filtro) {
+        recargarComboCedulas(combo, filtro);
+        if (usuarioActual.getPerfil() == Usuario.Perfil.EMPLEADO) {
+            combo.setEnabled(false);
+            return;
+        }
+        combo.addPopupMenuListener(new javax.swing.event.PopupMenuListener() {
+            @Override public void popupMenuWillBecomeVisible(javax.swing.event.PopupMenuEvent e) {
+                recargarComboCedulas(combo, filtro);
+            }
+            @Override public void popupMenuWillBecomeInvisible(javax.swing.event.PopupMenuEvent e) {}
+            @Override public void popupMenuCanceled(javax.swing.event.PopupMenuEvent e) {}
+        });
+    }
+
+    private void recargarComboCedulas(JComboBox<String> combo, Empleado.TipoContrato filtro) {
+        Object sel = combo.getSelectedItem();
+        combo.removeAllItems();
+        if (usuarioActual.getPerfil() == Usuario.Perfil.EMPLEADO) {
+            combo.addItem(usuarioActual.getCedula());
+            return;
+        }
+        combo.addItem("-- Seleccione --");
+        for (Empleado e : new EmpleadoDAO().listarTodos()) {
+            if (e.getTipoContrato() == filtro) {
+                combo.addItem(e.getCedula() + " - " + e.getNombreCompleto());
+            }
+        }
+        if (sel != null) combo.setSelectedItem(sel);
+    }
+
+    /** Extrae la cédula de un item "cedula - Nombre"; null si no hay selección válida. */
+    private String extraerCedula(Object item) {
+        if (item == null) return null;
+        String s = item.toString().trim();
+        if (s.isEmpty() || s.startsWith("--")) return null;
+        int idx = s.indexOf(" - ");
+        return idx >= 0 ? s.substring(0, idx).trim() : s;
+    }
+
+    private JPanel crearTarjetaResumen(String titulo, String valor) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(new Color(248, 240, 242));
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(COLOR_UTA, 2),
+            BorderFactory.createEmptyBorder(10, 14, 10, 14)));
+        JLabel lblTit = new JLabel(titulo);
+        lblTit.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lblTit.setForeground(COLOR_GRIS);
+        JLabel lblVal = new JLabel(valor);
+        lblVal.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        lblVal.setForeground(COLOR_UTA);
+        card.add(lblTit, BorderLayout.NORTH);
+        card.add(lblVal, BorderLayout.CENTER);
         return card;
     }
 
-    private JPanel crearCardMini(String titulo, String valor, Color colorValor) {
-        JPanel card = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(COLOR_FONDO);
-                g2d.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
-                g2d.setColor(COLOR_PANEL_CLARO);
-                g2d.draw(new RoundRectangle2D.Float(0, 0, getWidth() - 1, getHeight() - 1, 10, 10));
-                g2d.dispose();
-            }
-        };
-        card.setOpaque(false);
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-
-        JLabel lblTit = new JLabel(titulo);
-        lblTit.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        lblTit.setForeground(COLOR_TEXTO_SEC);
-        lblTit.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel lblVal = new JLabel(valor);
-        lblVal.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        lblVal.setForeground(colorValor);
-        lblVal.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        card.add(lblTit);
-        card.add(Box.createRigidArea(new Dimension(0, 4)));
-        card.add(lblVal);
-
+    private JPanel crearTarjetaMetrica(String titulo, JLabel lblValor, Color colorValor) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(COLOR_UTA),
+            BorderFactory.createEmptyBorder(6, 6, 6, 6)));
+        JLabel lblTit = new JLabel(titulo, SwingConstants.CENTER);
+        lblTit.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblTit.setForeground(COLOR_GRIS);
+        lblValor.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblValor.setForeground(colorValor);
+        card.add(lblTit, BorderLayout.NORTH);
+        card.add(lblValor, BorderLayout.CENTER);
         return card;
+    }
+
+    private JLabel crearTituloSeccion(String texto) {
+        JLabel lbl = new JLabel(texto);
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lbl.setForeground(COLOR_UTA);
+        lbl.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+        return lbl;
+    }
+
+    private JLabel crearEtiquetaSeccion(String texto) {
+        JLabel lbl = new JLabel(texto);
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lbl.setForeground(COLOR_UTA);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lbl.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        return lbl;
     }
 
     private JButton crearBotonMenu(String texto, ActionListener action) {
         JButton btn = new JButton(texto);
         btn.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        btn.setForeground(COLOR_TEXTO_SEC);
-        btn.setBackground(COLOR_SIDEBAR);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
         btn.setHorizontalAlignment(SwingConstants.LEFT);
-        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
-        btn.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 10));
+        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btn.setFocusPainted(false);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        btn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btn.setBackground(COLOR_PANEL);
-                btn.setForeground(COLOR_TEXTO);
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btn.setBackground(COLOR_SIDEBAR);
-                btn.setForeground(COLOR_TEXTO_SEC);
-            }
-        });
-
         btn.addActionListener(action);
         return btn;
-    }
-
-    private JButton crearBotonAccion(String texto, Color colorFondo) {
-        JButton btn = new JButton(texto) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(getModel().isRollover() ? colorFondo.brighter() : colorFondo);
-                g2d.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
-                g2d.setColor(COLOR_TEXTO);
-                g2d.setFont(getFont());
-                FontMetrics fm = g2d.getFontMetrics();
-                g2d.drawString(getText(), (getWidth() - fm.stringWidth(getText())) / 2,
-                    (getHeight() + fm.getAscent() - fm.getDescent()) / 2);
-                g2d.dispose();
-            }
-        };
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setPreferredSize(new Dimension(200, 36));
-        btn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return btn;
-    }
-
-    private JSeparator crearSeparador() {
-        JSeparator sep = new JSeparator();
-        sep.setForeground(COLOR_PANEL_CLARO);
-        sep.setBackground(COLOR_SIDEBAR);
-        sep.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        return sep;
     }
 
     private JLabel crearLabel(String texto) {
         JLabel lbl = new JLabel(texto);
         lbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lbl.setForeground(COLOR_TEXTO_SEC);
+        lbl.setForeground(COLOR_TEXTO);
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         return lbl;
     }
 
-    private JTextField crearCampo(String placeholder) {
-        JTextField field = new JTextField();
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        field.setForeground(COLOR_TEXTO);
-        field.setBackground(COLOR_FONDO);
-        field.setCaretColor(COLOR_TEXTO);
-        field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(71, 85, 105), 1, true),
-            BorderFactory.createEmptyBorder(6, 10, 6, 10)
-        ));
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
-        field.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return field;
+    private void limitarAltura(JComponent... comps) {
+        for (JComponent c : comps) {
+            c.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+            c.setAlignmentX(Component.LEFT_ALIGNMENT);
+        }
+    }
+
+    /**
+     * Aplica un estilo consistente a una tabla y, sobre todo, fuerza encabezados
+     * de columna VISIBLES (fondo rojo UTA con texto blanco) en cualquier Look & Feel.
+     */
+    private void estilizarTabla(JTable tabla) {
+        tabla.setRowHeight(24);
+        tabla.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        tabla.setShowGrid(true);
+        tabla.setGridColor(new Color(210, 210, 210));
+        tabla.getTableHeader().setReorderingAllowed(false);
+
+        JTableHeader header = tabla.getTableHeader();
+        header.setPreferredSize(new Dimension(0, 28));
+        header.setDefaultRenderer(new DefaultTableCellRenderer() {
+            {
+                setHorizontalAlignment(SwingConstants.CENTER);
+                setOpaque(true);
+            }
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
+                setBackground(COLOR_UTA);
+                setForeground(Color.WHITE);
+                setFont(new Font("Segoe UI", Font.BOLD, 13));
+                setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, COLOR_UTA_OSCURO));
+                return this;
+            }
+        });
     }
 }
