@@ -117,13 +117,37 @@ public class ConexionDB {
         String sqlAdmin = "INSERT IGNORE INTO usuarios (cedula, nombre, contrasena, perfil) "
                 + "VALUES ('admin', 'Administrador Sistema', 'admin123', 'ADMINISTRADOR')";
 
-        try (Statement stmt = getConexion().createStatement()) {
+        // Insertar empleados de prueba
+        String sqlEmpTCUser = "INSERT IGNORE INTO usuarios (cedula, nombre, contrasena, perfil) "
+                + "VALUES ('12345', 'Juan Perez', 'emp123', 'EMPLEADO')";
+        String sqlEmpTCEmpleado = "INSERT IGNORE INTO empleados (cedula, nombre, apellido, cargo, tipo_contrato) "
+                + "VALUES ('12345', 'Juan', 'Perez', 'Desarrollador', 'TIEMPO_COMPLETO')";
+
+        String sqlEmpTPUser = "INSERT IGNORE INTO usuarios (cedula, nombre, contrasena, perfil) "
+                + "VALUES ('67890', 'Maria Gomez', 'emp456', 'EMPLEADO')";
+        String sqlEmpTPEmpleado = "INSERT IGNORE INTO empleados (cedula, nombre, apellido, cargo, tipo_contrato) "
+                + "VALUES ('67890', 'Maria', 'Gomez', 'Disenadora', 'TIEMPO_PARCIAL')";
+
+        Connection conn = getConexion();
+        if (conn == null) {
+            System.err.println("[DB] ERROR CRÍTICO: No se pudo establecer conexión con la base de datos MySQL.");
+            System.err.println("[DB] Por favor verifique:");
+            System.err.println("     1. Que su servidor MySQL (XAMPP/WampServer) esté encendido.");
+            System.err.println("     2. Configure sus credenciales correctas en el archivo 'db.properties'.");
+            return;
+        }
+
+        try (Statement stmt = conn.createStatement()) {
             stmt.execute(sqlUsuarios);
             stmt.execute(sqlEmpleados);
             stmt.execute(sqlHuellas);
             stmt.execute(sqlAsistencias);
             stmt.execute(sqlAdmin);
-            System.out.println("[DB] Tablas inicializadas correctamente (MySQL).");
+            stmt.execute(sqlEmpTCUser);
+            stmt.execute(sqlEmpTCEmpleado);
+            stmt.execute(sqlEmpTPUser);
+            stmt.execute(sqlEmpTPEmpleado);
+            System.out.println("[DB] Tablas e información de prueba inicializadas correctamente (MySQL).");
         } catch (SQLException e) {
             System.err.println("[DB] Error al inicializar tablas: " + e.getMessage());
         }

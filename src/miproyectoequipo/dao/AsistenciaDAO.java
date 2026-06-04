@@ -126,6 +126,29 @@ public class AsistenciaDAO {
     }
 
     /**
+     * Lista asistencias de todos los empleados en un rango de fechas.
+     * @param desde fecha inicio
+     * @param hasta fecha fin
+     * @return lista de registros
+     */
+    public List<RegistroAsistencia> listarTodosPorRango(LocalDate desde, LocalDate hasta) {
+        List<RegistroAsistencia> lista = new ArrayList<>();
+        String sql = "SELECT * FROM asistencias WHERE fecha BETWEEN ? AND ? ORDER BY fecha, cedula_empleado";
+        try (Connection conn = ConexionDB.getInstancia().getConexion();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setDate(1, Date.valueOf(desde));
+            ps.setDate(2, Date.valueOf(hasta));
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                lista.add(mapearAsistencia(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("[AsistenciaDAO] Error al listar todos por rango: " + e.getMessage());
+        }
+        return lista;
+    }
+
+    /**
      * Mapea un ResultSet a RegistroAsistencia.
      */
     private RegistroAsistencia mapearAsistencia(ResultSet rs) throws SQLException {
