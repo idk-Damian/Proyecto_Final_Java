@@ -47,7 +47,7 @@ public class EmpleadoDAO {
      * @return Empleado encontrado o null
      */
     public Empleado buscarPorCedula(String cedula) {
-        String sql = "SELECT * FROM empleados WHERE cedula = ? AND activo = 1";
+        String sql = "SELECT * FROM empleados WHERE cedula = ?";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, cedula);
@@ -62,19 +62,40 @@ public class EmpleadoDAO {
     }
 
     /**
+     * Busca un empleado por su ID interno.
+     * @param id del empleado
+     * @return Empleado encontrado o null
+     */
+    public Empleado buscarPorId(int id) {
+        String sql = "SELECT * FROM empleados WHERE id = ?";
+        try (Connection conn = ConexionDB.getInstancia().getConexion();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return mapearEmpleado(rs);
+            }
+        } catch (SQLException e) {
+            System.err.println("[EmpleadoDAO] Error al buscar por id: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
      * Modifica la información de un empleado.
      * @param empleado con datos actualizados
      * @return true si se modificó
      */
     public boolean modificar(Empleado empleado) {
-        String sql = "UPDATE empleados SET nombre = ?, apellido = ?, cargo = ?, tipo_contrato = ? WHERE cedula = ?";
+        String sql = "UPDATE empleados SET nombre = ?, apellido = ?, cargo = ?, tipo_contrato = ?, activo = ? WHERE cedula = ?";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, empleado.getNombre());
             ps.setString(2, empleado.getApellido());
             ps.setString(3, empleado.getCargo());
             ps.setString(4, empleado.getTipoContrato().name());
-            ps.setString(5, empleado.getCedula());
+            ps.setInt(5, empleado.isActivo() ? 1 : 0);
+            ps.setString(6, empleado.getCedula());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("[EmpleadoDAO] Error al modificar: " + e.getMessage());
@@ -88,13 +109,37 @@ public class EmpleadoDAO {
      * @return true si se eliminó
      */
     public boolean eliminar(String cedula) {
-        String sql = "UPDATE empleados SET activo = 0 WHERE cedula = ?";
-        try (Connection conn = ConexionDB.getInstancia().getConexion();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, cedula);
-            return ps.executeUpdate() > 0;
+        String sqlEliminarHuella = "DELETE FROM huellas_digitales WHERE cedula_empleado = ?";
+        String sqlEliminarEmpleado = "DELETE FROM empleados WHERE cedula = ?";
+
+        try (Connection conn = ConexionDB.getInstancia().getConexion()) {
+
+            conn.setAutoCommit(false);
+
+            try (
+                PreparedStatement psHuella = conn.prepareStatement(sqlEliminarHuella);
+                PreparedStatement psEmpleado = conn.prepareStatement(sqlEliminarEmpleado)
+            ) {
+                psHuella.setString(1, cedula);
+                psHuella.executeUpdate();
+
+                psEmpleado.setString(1, cedula);
+                int filasEmpleado = psEmpleado.executeUpdate();
+
+                conn.commit();
+
+                return filasEmpleado > 0;
+
+            } catch (SQLException e) {
+                conn.rollback();
+                System.err.println("Error al eliminar empleado: " + e.getMessage());
+                return false;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+
         } catch (SQLException e) {
-            System.err.println("[EmpleadoDAO] Error al eliminar: " + e.getMessage());
+            System.err.println("Error de conexión al eliminar empleado: " + e.getMessage());
             return false;
         }
     }

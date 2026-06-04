@@ -52,12 +52,20 @@ public class LoginFrame extends JFrame implements HuellaListener {
     private JButton btnLoginManual;
     private JPanel panelHuella;
     private JPanel panelManual;
+    private JPanel panelRostro;
     private CardLayout cardLayout;
     private JPanel panelCentral;
+    private JLabel lblVideoRostro;
 
     // Lógica
     private ZKFingerprintManager fingerprintManager;
+    private miproyectoequipo.rostro.RostroManager rostroManager;
+    private org.bytedeco.javacv.OpenCVFrameGrabber grabberRostro;
+    private boolean camaraRostroCorriendo = false;
+    private int modoActual = 0; // 0=HUELLA, 1=MANUAL, 2=ROSTRO
+
     private UsuarioDAO usuarioDAO;
+    private miproyectoequipo.dao.EmpleadoDAO empleadoDAO;
     private HuellaDAO huellaDAO;
     private boolean lectorConectado = false;
 
@@ -67,7 +75,9 @@ public class LoginFrame extends JFrame implements HuellaListener {
 
     public LoginFrame() {
         usuarioDAO = new UsuarioDAO();
+        empleadoDAO = new miproyectoequipo.dao.EmpleadoDAO();
         huellaDAO = new HuellaDAO();
+        rostroManager = new miproyectoequipo.rostro.RostroManager();
         fingerprintManager = new ZKFingerprintManager();
         fingerprintManager.setListener(this);
 
@@ -145,9 +155,11 @@ public class LoginFrame extends JFrame implements HuellaListener {
 
         panelHuella = crearPanelHuella();
         panelManual = crearPanelManual();
+        panelRostro = crearPanelRostro();
 
         panelCentral.add(panelHuella, "HUELLA");
         panelCentral.add(panelManual, "MANUAL");
+        panelCentral.add(panelRostro, "ROSTRO");
 
         add(panelCentral, BorderLayout.CENTER);
 
@@ -157,10 +169,22 @@ public class LoginFrame extends JFrame implements HuellaListener {
         panelInferior.setLayout(new BoxLayout(panelInferior, BoxLayout.Y_AXIS));
         panelInferior.setBorder(BorderFactory.createEmptyBorder(0, 40, 25, 40));
 
-        // Botón toggle entre modos
-        JButton btnToggle = crearBotonLink("Cambiar a login manual / huella");
-        btnToggle.addActionListener(e -> toggleModo());
-        btnToggle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // === Panel Inferior: Controles de Cambio de Modo ===
+        JPanel panelBotonesModo = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 0));
+        panelBotonesModo.setBackground(COLOR_FONDO);
+
+        JButton btnHuella = crearBotonLink("👆 Huella");
+        btnHuella.addActionListener(e -> cambiarModo(0));
+        
+        JButton btnManual = crearBotonLink("🔐 Manual");
+        btnManual.addActionListener(e -> cambiarModo(1));
+
+        JButton btnRostro = crearBotonLink("📸 Rostro");
+        btnRostro.addActionListener(e -> cambiarModo(2));
+
+        panelBotonesModo.add(btnHuella);
+        panelBotonesModo.add(btnManual);
+        panelBotonesModo.add(btnRostro);
 
         // Estado de conexión
         lblMensaje = new JLabel(" ", SwingConstants.CENTER);
@@ -168,7 +192,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
         lblMensaje.setForeground(COLOR_TEXTO_SEC);
         lblMensaje.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        panelInferior.add(btnToggle);
+        panelInferior.add(panelBotonesModo);
         panelInferior.add(Box.createRigidArea(new Dimension(0, 10)));
         panelInferior.add(lblMensaje);
 
@@ -181,6 +205,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
                 if (fingerprintManager.isActivo()) {
                     fingerprintManager.cerrar();
                 }
+                detenerCamaraLogin();
                 ConexionDB.getInstancia().cerrarConexion();
             }
         });
@@ -366,6 +391,132 @@ public class LoginFrame extends JFrame implements HuellaListener {
         return panel;
     }
 
+    /**
+     * Crea el panel de login por reconocimiento facial.
+     */
+    private JPanel crearPanelRostro() {
+        JPanel panel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int x = 40, y = 10, w = getWidth() - 80, h = getHeight() - 20;
+                g2d.setColor(COLOR_PANEL);
+                g2d.fill(new RoundRectangle2D.Float(x, y, w, h, 20, 20));
+                g2d.setColor(COLOR_PANEL_CLARO);
+                g2d.setStroke(new BasicStroke(1));
+                g2d.draw(new RoundRectangle2D.Float(x, y, w, h, 20, 20));
+                g2d.dispose();
+            }
+        };
+        panel.setOpaque(false);
+        panel.setLayout(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
+
+        JLabel lblTitRostro = new JLabel("Ingreso Facial", SwingConstants.CENTER);
+        lblTitRostro.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblTitRostro.setForeground(COLOR_TEXTO);
+        lblTitRostro.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        panel.add(lblTitRostro, BorderLayout.NORTH);
+
+        lblVideoRostro = new JLabel("Esperando cámara...", SwingConstants.CENTER);
+        lblVideoRostro.setForeground(COLOR_TEXTO_SEC);
+        panel.add(lblVideoRostro, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private void iniciarCamaraLogin() {
+        if (camaraRostroCorriendo) return;
+        camaraRostroCorriendo = true;
+        lblVideoRostro.setText("Iniciando cámara...");
+
+        new Thread(() -> {
+            try {
+                grabberRostro = new org.bytedeco.javacv.OpenCVFrameGrabber(0);
+                grabberRostro.start();
+
+                org.bytedeco.javacv.OpenCVFrameConverter.ToMat converterMat = new org.bytedeco.javacv.OpenCVFrameConverter.ToMat();
+                org.bytedeco.javacv.Java2DFrameConverter converterBimg = new org.bytedeco.javacv.Java2DFrameConverter();
+
+                int confirmaciones = 0;
+                int idReconocidoAnterior = -1;
+
+                while (camaraRostroCorriendo && grabberRostro != null) {
+                    org.bytedeco.javacv.Frame frame = grabberRostro.grab();
+                    if (frame == null) continue;
+
+                    org.bytedeco.opencv.opencv_core.Mat matImage = converterMat.convert(frame);
+                    if (matImage == null) continue;
+
+                    org.bytedeco.opencv.opencv_core.RectVector faces = rostroManager.detectarRostros(matImage);
+
+                    if (faces.size() > 0) {
+                        org.bytedeco.opencv.opencv_core.Rect rect = faces.get(0);
+                        org.bytedeco.opencv.opencv_core.Mat faceMat = new org.bytedeco.opencv.opencv_core.Mat(matImage, rect);
+                        
+                        int idReconocido = rostroManager.reconocerRostro(faceMat);
+                        
+                        if (idReconocido != -1) {
+                            if (idReconocido == idReconocidoAnterior) {
+                                confirmaciones++;
+                            } else {
+                                confirmaciones = 1;
+                                idReconocidoAnterior = idReconocido;
+                            }
+
+                            org.bytedeco.opencv.global.opencv_imgproc.rectangle(matImage, rect, new org.bytedeco.opencv.opencv_core.Scalar(0, 255, 0, 0), 2, 8, 0);
+
+                            if (confirmaciones >= 5) {
+                                camaraRostroCorriendo = false;
+                                miproyectoequipo.modelo.Empleado emp = empleadoDAO.buscarPorId(idReconocido);
+                                if (emp != null) {
+                                    Usuario usuario = usuarioDAO.buscarPorCedula(emp.getCedula());
+                                    if (usuario != null) {
+                                        SwingUtilities.invokeLater(() -> {
+                                            miproyectoequipo.utils.AudioPlayer.reproducirMP3("src/miproyectoequipo/audios/verificado.mp3");
+                                            mostrarMensaje("¡Rostro reconocido! Bienvenido " + usuario.getNombre(), COLOR_EXITO);
+                                            abrirPanelPrincipal(usuario);
+                                        });
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            confirmaciones = 0;
+                            idReconocidoAnterior = -1;
+                            org.bytedeco.opencv.global.opencv_imgproc.rectangle(matImage, rect, new org.bytedeco.opencv.opencv_core.Scalar(0, 0, 255, 0), 2, 8, 0);
+                        }
+                    }
+
+                    BufferedImage bimg = converterBimg.convert(converterMat.convert(matImage));
+                    if (bimg != null && camaraRostroCorriendo) {
+                        SwingUtilities.invokeLater(() -> lblVideoRostro.setIcon(new ImageIcon(bimg.getScaledInstance(250, 250, Image.SCALE_SMOOTH))));
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                detenerCamaraLogin();
+            }
+        }).start();
+    }
+
+    private void detenerCamaraLogin() {
+        camaraRostroCorriendo = false;
+        if (grabberRostro != null) {
+            try {
+                grabberRostro.stop();
+                grabberRostro.release();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            grabberRostro = null;
+        }
+    }
+
     // =============================================
     // Lógica de autenticación
     // =============================================
@@ -418,6 +569,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
         if (fingerprintManager.isActivo()) {
             fingerprintManager.cerrar();
         }
+        detenerCamaraLogin();
         animTimer.stop();
 
         PanelPrincipalFrame panel = new PanelPrincipalFrame(usuario);
@@ -425,11 +577,21 @@ public class LoginFrame extends JFrame implements HuellaListener {
         this.dispose();
     }
 
-    private void toggleModo() {
-        if (panelCentral.getComponent(0).isVisible()) {
+    private void cambiarModo(int modoSeleccionado) {
+        modoActual = modoSeleccionado;
+        
+        // Stop camera if moving away from Rostro
+        if (modoActual != 2) {
+            detenerCamaraLogin();
+        }
+
+        if (modoActual == 0) {
+            cardLayout.show(panelCentral, "HUELLA");
+        } else if (modoActual == 1) {
             cardLayout.show(panelCentral, "MANUAL");
         } else {
-            cardLayout.show(panelCentral, "HUELLA");
+            cardLayout.show(panelCentral, "ROSTRO");
+            iniciarCamaraLogin();
         }
     }
 

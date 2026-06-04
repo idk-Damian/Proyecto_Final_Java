@@ -11,4 +11,12 @@
         <maven.compiler.target>22</maven.compiler.target>
         <exec.mainClass>fisei.uta.proyecto_final_java.Proyecto_Final_Java</exec.mainClass>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.bytedeco</groupId>
+            <artifactId>javacv-platform</artifactId>
+            <version>1.5.10</version>
+        </dependency>
+    </dependencies>
 </project>
