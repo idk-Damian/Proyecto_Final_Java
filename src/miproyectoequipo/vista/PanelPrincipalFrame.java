@@ -145,7 +145,9 @@ public class PanelPrincipalFrame extends JFrame {
 
         menu.add(Box.createRigidArea(new Dimension(0, 10)));
         menu.add(crearEtiquetaSeccion("OPERACIONES"));
-        menu.add(crearBotonMenu("Marcar Asistencia", e -> registrarAsistencia()));
+        if (usuarioActual.getPerfil() == Usuario.Perfil.EMPLEADO) {
+            menu.add(crearBotonMenu("Marcar Asistencia", e -> registrarAsistencia()));
+        }
         menu.add(crearBotonMenu("Consultas y Reportes", e -> cardLayout.show(panelContenido, "REPORTES")));
 
         menu.add(Box.createVerticalGlue());
@@ -849,14 +851,25 @@ public class PanelPrincipalFrame extends JFrame {
     }
 
     private void abrirRegistroRostro() {
-        String cedula = JOptionPane.showInputDialog(this, "Ingrese la cédula del empleado para registrar rostro:", "Registrar Rostro", JOptionPane.QUESTION_MESSAGE);
-        if (cedula != null && !cedula.trim().isEmpty()) {
-            Empleado emp = new EmpleadoDAO().buscarPorCedula(cedula.trim());
-            if (emp != null) {
-                new RegistroRostroFrame(emp).setVisible(true);
-            } else {
-                JOptionPane.showMessageDialog(this, "Empleado no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
-            }
+        java.util.List<Empleado> empleados = new EmpleadoDAO().listarTodos();
+        if (empleados.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No hay empleados registrados.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        JComboBox<String> cmb = new JComboBox<>();
+        for (Empleado e : empleados) {
+            cmb.addItem(e.getCedula() + " - " + e.getNombreCompleto());
+        }
+        int op = JOptionPane.showConfirmDialog(this, cmb, "Registrar Rostro - Seleccione el empleado",
+            JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (op != JOptionPane.OK_OPTION) return;
+
+        String cedula = extraerCedula(cmb.getSelectedItem());
+        Empleado emp = cedula != null ? new EmpleadoDAO().buscarPorCedula(cedula) : null;
+        if (emp != null) {
+            new RegistroRostroFrame(emp).setVisible(true);
+        } else {
+            JOptionPane.showMessageDialog(this, "Empleado no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -904,12 +917,12 @@ public class PanelPrincipalFrame extends JFrame {
 
         if (marca == null) return;
 
-        Object[] metodos = {"Huella Dactilar", "Reconocimiento Facial"};
+        Object[] metodos = {"Huella Dactilar", "Reconocimiento Facial", "Usuario y Contraseña"};
         int eleccion = JOptionPane.showOptionDialog(this,
             "Marcación seleccionada: " + marca + "\n\n"
-            + "Ahora valide su identidad. ¿Con qué método biométrico desea continuar?",
-            "Paso 2 de 2 - Validación Biométrica",
-            JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,
+            + "Ahora valide su identidad. ¿Cómo desea continuar?",
+            "Paso 2 de 2 - Validación de Identidad",
+            JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
             null, metodos, metodos[0]);
 
         if (eleccion == JOptionPane.CLOSED_OPTION) return;
@@ -920,7 +933,7 @@ public class PanelPrincipalFrame extends JFrame {
             if (!new HuellaDAO().tieneHuella(cedula)) {
                 JOptionPane.showMessageDialog(this,
                     "Este empleado no tiene una huella registrada.\n"
-                    + "Use el reconocimiento facial o registre su huella primero.",
+                    + "Use otro método o registre su huella primero.",
                     "Sin huella", JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -931,10 +944,12 @@ public class PanelPrincipalFrame extends JFrame {
             ValidacionRostroDialog dialog = new ValidacionRostroDialog(this, usuarioActual);
             dialog.setVisible(true);
             validado = dialog.isValidado();
+        } else if (eleccion == 2) {
+            validado = validarManual(cedula);
         }
 
         if (!validado) {
-            JOptionPane.showMessageDialog(this, "Validación biométrica fallida o cancelada.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Validación de identidad fallida o cancelada.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -959,6 +974,38 @@ public class PanelPrincipalFrame extends JFrame {
         } else {
             JOptionPane.showMessageDialog(this, "Error al registrar la asistencia.", "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private boolean validarManual(String cedula) {
+        JTextField txtId = new JTextField();
+        JPasswordField txtPass = new JPasswordField();
+        JPanel form = new JPanel(new GridLayout(0, 1, 4, 3));
+        form.add(new JLabel("Cédula, correo o usuario"));
+        form.add(txtId);
+        form.add(new JLabel("Contraseña"));
+        form.add(txtPass);
+
+        int op = JOptionPane.showConfirmDialog(this, form, "Validación Manual",
+            JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (op != JOptionPane.OK_OPTION) return false;
+
+        String id = txtId.getText().trim();
+        String pass = new String(txtPass.getPassword());
+        if (id.isEmpty() || pass.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Complete sus credenciales.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+
+        Usuario u = new UsuarioDAO().autenticar(id, pass);
+        if (u == null) {
+            JOptionPane.showMessageDialog(this, "Credenciales incorrectas.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        if (!cedula.equals(u.getCedula())) {
+            JOptionPane.showMessageDialog(this, "Las credenciales no corresponden a este empleado.", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+        return true;
     }
 
     private void cerrarSesion() {

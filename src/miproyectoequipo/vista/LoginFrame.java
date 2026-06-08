@@ -423,7 +423,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
         JTextField txtEmail = new JTextField();
         JTextField txtCargo = new JTextField();
         JPasswordField txtPass = new JPasswordField();
-        JComboBox<String> cmbPerfil = new JComboBox<>(new String[]{"EMPLEADO", "ADMINISTRADOR"});
         JComboBox<String> cmbTipo = new JComboBox<>(new String[]{"TIEMPO_COMPLETO", "TIEMPO_PARCIAL"});
 
         JPanel form = new JPanel(new GridLayout(0, 1, 4, 3));
@@ -441,9 +440,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
         form.add(txtCargo);
         form.add(new JLabel("Contraseña *"));
         form.add(txtPass);
-        form.add(new JLabel("Perfil"));
-        form.add(cmbPerfil);
-        form.add(new JLabel("Tipo de Contrato (si es empleado)"));
+        form.add(new JLabel("Tipo de Contrato"));
         form.add(cmbTipo);
 
         int op = JOptionPane.showConfirmDialog(this, form, "Registro de Usuario",
@@ -467,7 +464,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
             return;
         }
 
-        Usuario.Perfil perfil = Usuario.Perfil.valueOf((String) cmbPerfil.getSelectedItem());
+        Usuario.Perfil perfil = Usuario.Perfil.EMPLEADO;
         String nombreCompleto = (nom + " " + ape).trim();
         Usuario nuevo = new Usuario(ced, nombreCompleto,
             nombreUsuario.isEmpty() ? null : nombreUsuario,
@@ -479,20 +476,18 @@ public class LoginFrame extends JFrame implements HuellaListener {
             return;
         }
 
-        if (perfil == Usuario.Perfil.EMPLEADO) {
-            miproyectoequipo.modelo.Empleado.TipoContrato tipo =
-                miproyectoequipo.modelo.Empleado.TipoContrato.valueOf((String) cmbTipo.getSelectedItem());
-            miproyectoequipo.modelo.Empleado emp;
-            if (tipo == miproyectoequipo.modelo.Empleado.TipoContrato.TIEMPO_COMPLETO) {
-                emp = new miproyectoequipo.modelo.EmpleadoTiempoCompleto(ced, nom, ape, cargo);
-            } else {
-                emp = new miproyectoequipo.modelo.EmpleadoTiempoParcial(ced, nom, ape, cargo);
-            }
-            empleadoDAO.insertar(emp);
+        miproyectoequipo.modelo.Empleado.TipoContrato tipo =
+            miproyectoequipo.modelo.Empleado.TipoContrato.valueOf((String) cmbTipo.getSelectedItem());
+        miproyectoequipo.modelo.Empleado emp;
+        if (tipo == miproyectoequipo.modelo.Empleado.TipoContrato.TIEMPO_COMPLETO) {
+            emp = new miproyectoequipo.modelo.EmpleadoTiempoCompleto(ced, nom, ape, cargo);
+        } else {
+            emp = new miproyectoequipo.modelo.EmpleadoTiempoParcial(ced, nom, ape, cargo);
         }
+        empleadoDAO.insertar(emp);
 
         JOptionPane.showMessageDialog(this,
-            "Usuario registrado correctamente.\n\nCédula: " + ced + "\nPerfil: " + perfil.name()
+            "Empleado registrado correctamente.\n\nCédula: " + ced
             + "\n\nYa puede iniciar sesión.",
             "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
 

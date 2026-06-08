@@ -34,7 +34,7 @@ public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
         this.cedulaEsperada = cedulaEsperada;
         this.nombreEmpleado = nombreEmpleado;
 
-        setSize(440, 260);
+        setSize(480, 520);
         setLocationRelativeTo(parent);
         setLayout(new BorderLayout());
 
@@ -57,8 +57,8 @@ public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
         lblEmp.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         lblImagenHuella = new JLabel("(Huella)", SwingConstants.CENTER);
-        lblImagenHuella.setPreferredSize(new Dimension(160, 180));
-        lblImagenHuella.setMaximumSize(new Dimension(160, 180));
+        lblImagenHuella.setPreferredSize(new Dimension(230, 260));
+        lblImagenHuella.setMaximumSize(new Dimension(230, 260));
         lblImagenHuella.setHorizontalAlignment(SwingConstants.CENTER);
         lblImagenHuella.setForeground(new Color(90, 90, 90));
         lblImagenHuella.setBorder(BorderFactory.createLineBorder(new Color(190, 190, 190)));
@@ -157,7 +157,7 @@ public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
             manager.guardarImagenBMP(imagen, "temp_fingerprint.bmp");
             BufferedImage img = ImageIO.read(new File("temp_fingerprint.bmp"));
             if (img != null) {
-                Image scaled = img.getScaledInstance(150, 170, Image.SCALE_SMOOTH);
+                Image scaled = img.getScaledInstance(220, 250, Image.SCALE_SMOOTH);
                 lblImagenHuella.setText(null);
                 lblImagenHuella.setIcon(new ImageIcon(scaled));
             }

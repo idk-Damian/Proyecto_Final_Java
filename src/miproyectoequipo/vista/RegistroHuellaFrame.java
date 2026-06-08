@@ -25,7 +25,7 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
     private static final Color COLOR_TEXTO = Color.BLACK;
     private static final Color COLOR_TEXTO_SEC = new Color(90, 90, 90);
 
-    private JTextField txtCedula;
+    private JComboBox<String> cmbCedula;
     private JButton btnBuscar;
     private JButton btnRegistrar;
     private JButton btnCancelar;
@@ -95,7 +95,7 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
             BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(COLOR_UTA), "Datos del Empleado")));
 
-        JLabel lblCedula = new JLabel("Cédula del Empleado");
+        JLabel lblCedula = new JLabel("Empleado");
         lblCedula.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblCedula.setForeground(COLOR_TEXTO_SEC);
         lblCedula.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -105,17 +105,17 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         panelBusqueda.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
         panelBusqueda.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        txtCedula = new JTextField();
-        txtCedula.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        txtCedula.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(COLOR_BORDE, 1),
-            BorderFactory.createEmptyBorder(6, 8, 6, 8)));
-        txtCedula.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        cmbCedula = new JComboBox<>();
+        cmbCedula.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        cmbCedula.setMaximumSize(new Dimension(Integer.MAX_VALUE, 36));
+        for (Empleado emp : empleadoDAO.listarTodos()) {
+            cmbCedula.addItem(emp.getCedula() + " - " + emp.getNombreCompleto());
+        }
 
         btnBuscar = new JButton("Buscar");
         btnBuscar.addActionListener(e -> buscarEmpleado());
 
-        panelBusqueda.add(txtCedula);
+        panelBusqueda.add(cmbCedula);
         panelBusqueda.add(Box.createRigidArea(new Dimension(10, 0)));
         panelBusqueda.add(btnBuscar);
 
@@ -196,9 +196,10 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
     }
 
     private void buscarEmpleado() {
-        String cedula = txtCedula.getText().trim();
+        Object sel = cmbCedula.getSelectedItem();
+        String cedula = sel != null ? sel.toString().split(" - ")[0].trim() : "";
         if (cedula.isEmpty()) {
-            lblNombreEmpleado.setText("Ingrese una cédula");
+            lblNombreEmpleado.setText("Seleccione un empleado");
             lblNombreEmpleado.setForeground(COLOR_WARNING);
             return;
         }
@@ -239,7 +240,7 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         lblEstado.setText("Coloque el dedo en el lector (captura 1 de 3)");
         lblEstado.setForeground(COLOR_UTA);
         btnRegistrar.setEnabled(false);
-        txtCedula.setEnabled(false);
+        cmbCedula.setEnabled(false);
         btnBuscar.setEnabled(false);
 
         fingerprintManager.iniciarEnroll();
@@ -259,7 +260,7 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         lblEstado.setForeground(COLOR_TEXTO_SEC);
         lblProgreso.setText(" ");
         btnRegistrar.setEnabled(cedulaActual != null);
-        txtCedula.setEnabled(true);
+        cmbCedula.setEnabled(true);
         btnBuscar.setEnabled(true);
         lblImagenHuella.setIcon(null);
         lblImagenHuella.setText("(Huella)");
