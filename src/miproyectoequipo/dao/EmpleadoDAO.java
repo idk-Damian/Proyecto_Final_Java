@@ -1,7 +1,4 @@
-/*
- * DAO: Operaciones de Empleado
- * Esqueleto para que los compañeros completen
- */
+
 package miproyectoequipo.dao;
 
 import java.sql.*;
@@ -12,19 +9,8 @@ import miproyectoequipo.modelo.Empleado.TipoContrato;
 import miproyectoequipo.modelo.EmpleadoTiempoCompleto;
 import miproyectoequipo.modelo.EmpleadoTiempoParcial;
 
-/**
- * DAO para la tabla empleados.
- * Maneja CRUD de empleados (tiempo completo y parcial).
- * 
- * @author Vladimir
- */
 public class EmpleadoDAO {
 
-    /**
-     * Inserta un nuevo empleado.
-     * @param empleado a insertar
-     * @return true si se insertó correctamente
-     */
     public boolean insertar(Empleado empleado) {
         String sql = "INSERT INTO empleados (cedula, nombre, apellido, cargo, tipo_contrato) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
@@ -41,11 +27,6 @@ public class EmpleadoDAO {
         }
     }
 
-    /**
-     * Busca un empleado por su cédula.
-     * @param cedula del empleado
-     * @return Empleado encontrado o null
-     */
     public Empleado buscarPorCedula(String cedula) {
         String sql = "SELECT * FROM empleados WHERE cedula = ?";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
@@ -61,11 +42,6 @@ public class EmpleadoDAO {
         return null;
     }
 
-    /**
-     * Busca un empleado por su ID interno.
-     * @param id del empleado
-     * @return Empleado encontrado o null
-     */
     public Empleado buscarPorId(int id) {
         String sql = "SELECT * FROM empleados WHERE id = ?";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
@@ -81,11 +57,6 @@ public class EmpleadoDAO {
         return null;
     }
 
-    /**
-     * Modifica la información de un empleado.
-     * @param empleado con datos actualizados
-     * @return true si se modificó
-     */
     public boolean modificar(Empleado empleado) {
         String sql = "UPDATE empleados SET nombre = ?, apellido = ?, cargo = ?, tipo_contrato = ?, activo = ? WHERE cedula = ?";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
@@ -103,11 +74,6 @@ public class EmpleadoDAO {
         }
     }
 
-    /**
-     * Elimina (desactiva) un empleado.
-     * @param cedula del empleado
-     * @return true si se eliminó
-     */
     public boolean eliminar(String cedula) {
         String sqlEliminarHuella = "DELETE FROM huellas_digitales WHERE cedula_empleado = ?";
         String sqlEliminarEmpleado = "DELETE FROM empleados WHERE cedula = ?";
@@ -144,10 +110,6 @@ public class EmpleadoDAO {
         }
     }
 
-    /**
-     * Lista todos los empleados activos.
-     * @return lista de empleados
-     */
     public List<Empleado> listarTodos() {
         List<Empleado> lista = new ArrayList<>();
         String sql = "SELECT * FROM empleados WHERE activo = 1 ORDER BY apellido, nombre";
@@ -163,9 +125,6 @@ public class EmpleadoDAO {
         return lista;
     }
 
-    /**
-     * Mapea un ResultSet al tipo correcto de Empleado (TC o TP).
-     */
     private Empleado mapearEmpleado(ResultSet rs) throws SQLException {
         TipoContrato tipo = TipoContrato.valueOf(rs.getString("tipo_contrato"));
         Empleado emp;

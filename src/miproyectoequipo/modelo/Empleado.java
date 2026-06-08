@@ -1,15 +1,6 @@
-/*
- * Modelo: Empleado (clase abstracta)
- * Base para EmpleadoTiempoCompleto y EmpleadoTiempoParcial
- */
+
 package miproyectoequipo.modelo;
 
-/**
- * Clase abstracta que representa un empleado del sistema.
- * Los empleados pueden ser de tiempo completo o tiempo parcial.
- * 
- * @author Vladimir
- */
 public abstract class Empleado {
 
     public enum TipoContrato {
@@ -38,17 +29,8 @@ public abstract class Empleado {
         this.activo = true;
     }
 
-    /**
-     * Calcula el sueldo mensual del empleado.
-     * La implementación varía según el tipo de contrato.
-     * 
-     * @param horasTrabajadas total de horas trabajadas en el mes
-     * @param minutosAtraso total de minutos de atraso en el mes
-     * @return sueldo calculado
-     */
     public abstract double calcularSueldo(double horasTrabajadas, int minutosAtraso);
 
-    // Getters y Setters
     public int getId() {
         return id;
     }

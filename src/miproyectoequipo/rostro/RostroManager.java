@@ -26,12 +26,12 @@ public class RostroManager {
         if (!datasetDir.exists()) {
             datasetDir.mkdir();
         }
-        
+
         faceDetector = new CascadeClassifier(HAARCASCADE_PATH);
         if (faceDetector.empty()) {
             System.err.println("Error cargando " + HAARCASCADE_PATH);
         }
-        
+
         faceRecognizer = LBPHFaceRecognizer.create();
         File modelFile = new File(MODEL_FILE);
         if (modelFile.exists()) {
@@ -72,8 +72,7 @@ public class RostroManager {
         int counter = 0;
         for (File imageFile : files) {
             Mat img = imread(imageFile.getAbsolutePath(), IMREAD_GRAYSCALE);
-            
-            // Expected filename format: ID_SampleNum.jpg (e.g. 1_1.jpg)
+
             int label = Integer.parseInt(imageFile.getName().split("_")[0]);
 
             images.put(counter, img);
@@ -90,29 +89,27 @@ public class RostroManager {
     public int reconocerRostro(Mat faceImage) {
         IntPointer label = new IntPointer(1);
         DoublePointer confidence = new DoublePointer(1);
-        
+
         Mat grayFace = new Mat();
         if (faceImage.channels() > 1) {
             cvtColor(faceImage, grayFace, COLOR_BGR2GRAY);
         } else {
             grayFace = faceImage;
         }
-        
-        // Resize to 160x160 (standard size for LBPH)
+
         Mat resized = new Mat();
         resize(grayFace, resized, new Size(160, 160));
 
         faceRecognizer.predict(resized, label, confidence);
-        
+
         int predictedLabel = label.get(0);
         double conf = confidence.get(0);
-        
+
         System.out.println("Predicción: " + predictedLabel + " Confianza: " + conf);
-        
-        // Lower confidence is better in LBPH (distance). Typically < 60-70 is good.
+
         if (conf < 75.0) {
             return predictedLabel;
         }
-        return -1; // Unknown
+        return -1;
     }
 }

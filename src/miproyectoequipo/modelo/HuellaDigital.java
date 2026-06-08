@@ -1,17 +1,8 @@
-/*
- * Modelo: Huella Digital
- * Almacena el template de huella en formato Base64
- */
+
 package miproyectoequipo.modelo;
 
 import java.time.LocalDateTime;
 
-/**
- * Representa una huella digital registrada.
- * El template se almacena en formato Base64 generado por el SDK ZKTeco.
- * 
- * @author Vladimir
- */
 public class HuellaDigital {
 
     private int id;
@@ -29,7 +20,6 @@ public class HuellaDigital {
         this.fechaRegistro = LocalDateTime.now();
     }
 
-    // Getters y Setters
     public int getId() {
         return id;
     }

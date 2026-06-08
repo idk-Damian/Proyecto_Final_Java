@@ -1,7 +1,4 @@
-/*
- * DAO: Operaciones de Asistencia
- * Esqueleto para que los compañeros completen
- */
+
 package miproyectoequipo.dao;
 
 import java.sql.*;
@@ -11,25 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 import miproyectoequipo.modelo.RegistroAsistencia;
 
-/**
- * DAO para la tabla asistencias.
- * Registra y consulta asistencias diarias.
- * 
- * @author Vladimir
- */
 public class AsistenciaDAO {
 
-    /**
-     * Registra o actualiza la asistencia de un empleado para hoy.
-     * Valida que no haya duplicados.
-     * 
-     * @param registro datos de asistencia
-     * @return true si se registró correctamente
-     */
     public boolean registrarAsistencia(RegistroAsistencia registro) {
-        // Verificar si ya existe registro para hoy
+
         RegistroAsistencia existente = buscarPorCedulaYFecha(registro.getCedulaEmpleado(), registro.getFecha());
-        
+
         if (existente != null) {
             return actualizarAsistencia(registro);
         }
@@ -52,9 +36,6 @@ public class AsistenciaDAO {
         }
     }
 
-    /**
-     * Actualiza un registro de asistencia existente.
-     */
     private boolean actualizarAsistencia(RegistroAsistencia registro) {
         String sql = "UPDATE asistencias SET hora_entrada_manana = COALESCE(?, hora_entrada_manana), " +
                      "hora_salida_manana = COALESCE(?, hora_salida_manana), " +
@@ -78,12 +59,6 @@ public class AsistenciaDAO {
         }
     }
 
-    /**
-     * Busca el registro de asistencia de un empleado en una fecha.
-     * @param cedula del empleado
-     * @param fecha a buscar
-     * @return RegistroAsistencia o null
-     */
     public RegistroAsistencia buscarPorCedulaYFecha(String cedula, LocalDate fecha) {
         String sql = "SELECT * FROM asistencias WHERE cedula_empleado = ? AND fecha = ?";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
@@ -100,13 +75,6 @@ public class AsistenciaDAO {
         return null;
     }
 
-    /**
-     * Lista asistencias de un empleado en un rango de fechas.
-     * @param cedula del empleado
-     * @param desde fecha inicio
-     * @param hasta fecha fin
-     * @return lista de registros
-     */
     public List<RegistroAsistencia> listarPorCedulaYRango(String cedula, LocalDate desde, LocalDate hasta) {
         List<RegistroAsistencia> lista = new ArrayList<>();
         String sql = "SELECT * FROM asistencias WHERE cedula_empleado = ? AND fecha BETWEEN ? AND ? ORDER BY fecha";
@@ -125,12 +93,6 @@ public class AsistenciaDAO {
         return lista;
     }
 
-    /**
-     * Lista asistencias de todos los empleados en un rango de fechas.
-     * @param desde fecha inicio
-     * @param hasta fecha fin
-     * @return lista de registros
-     */
     public List<RegistroAsistencia> listarTodosPorRango(LocalDate desde, LocalDate hasta) {
         List<RegistroAsistencia> lista = new ArrayList<>();
         String sql = "SELECT * FROM asistencias WHERE fecha BETWEEN ? AND ? ORDER BY fecha, cedula_empleado";
@@ -148,9 +110,6 @@ public class AsistenciaDAO {
         return lista;
     }
 
-    /**
-     * Mapea un ResultSet a RegistroAsistencia.
-     */
     private RegistroAsistencia mapearAsistencia(ResultSet rs) throws SQLException {
         RegistroAsistencia reg = new RegistroAsistencia();
         reg.setId(rs.getInt("id"));

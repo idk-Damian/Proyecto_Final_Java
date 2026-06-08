@@ -1,24 +1,11 @@
-/*
- * Modelo: Registro de Asistencia
- * Controla entradas y salidas por jornada (mañana/tarde)
- */
+
 package miproyectoequipo.modelo;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-/**
- * Registro diario de asistencia de un empleado.
- * Jornada mañana: 08:00 - 13:00
- * Almuerzo: 13:00 - 14:00
- * Jornada tarde: 14:00 - 17:00
- * Total: 8 horas diarias
- * 
- * @author Vladimir
- */
 public class RegistroAsistencia {
 
-    // Horarios oficiales
     public static final LocalTime HORA_ENTRADA_MANANA = LocalTime.of(8, 0);
     public static final LocalTime HORA_SALIDA_MANANA = LocalTime.of(13, 0);
     public static final LocalTime HORA_ENTRADA_TARDE = LocalTime.of(14, 0);
@@ -44,10 +31,6 @@ public class RegistroAsistencia {
         this.minutosAtraso = 0;
     }
 
-    /**
-     * Calcula las horas trabajadas en el día.
-     * @return horas trabajadas como decimal (ej: 7.5)
-     */
     public double calcularHorasTrabajadas() {
         double horas = 0;
 
@@ -61,13 +44,9 @@ public class RegistroAsistencia {
             horas += minutosTarde / 60.0;
         }
 
-        return Math.min(horas, 8.0); // Máximo 8 horas
+        return Math.min(horas, 8.0);
     }
 
-    /**
-     * Calcula los minutos de atraso comparando con el horario oficial.
-     * @return minutos de atraso totales del día
-     */
     public int calcularMinutosAtraso() {
         int atraso = 0;
 
@@ -83,7 +62,6 @@ public class RegistroAsistencia {
         return atraso;
     }
 
-    // Getters y Setters
     public int getId() {
         return id;
     }

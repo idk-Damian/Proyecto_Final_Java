@@ -1,10 +1,4 @@
-/*
- * Vista: Pantalla de Registro de Huella Dactilar
- * Solo accesible por Administrador.
- * Permite registrar la huella de un empleado (3 capturas + merge).
- *
- * Diseño: Swing nativo con identidad institucional UTA (rojo vinotinto).
- */
+
 package miproyectoequipo.vista;
 
 import java.awt.*;
@@ -20,15 +14,8 @@ import miproyectoequipo.huella.ZKFingerprintManager;
 import miproyectoequipo.modelo.Empleado;
 import miproyectoequipo.modelo.Usuario;
 
-/**
- * Pantalla para registrar la huella dactilar de un empleado.
- * Proceso: Ingresar cédula -> 3 capturas del mismo dedo -> guardar en BD.
- *
- * @author Vladimir
- */
 public class RegistroHuellaFrame extends JFrame implements HuellaListener {
 
-    // Paleta institucional UTA sobre Look & Feel nativo
     private static final Color COLOR_UTA = new Color(122, 0, 30);
     private static final Color COLOR_UTA_OSCURO = new Color(90, 0, 22);
     private static final Color COLOR_BORDE = new Color(190, 190, 190);
@@ -38,7 +25,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
     private static final Color COLOR_TEXTO = Color.BLACK;
     private static final Color COLOR_TEXTO_SEC = new Color(90, 90, 90);
 
-    // Componentes
     private JTextField txtCedula;
     private JButton btnBuscar;
     private JButton btnRegistrar;
@@ -49,13 +35,12 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
     private JProgressBar progressBar;
     private JLabel lblProgreso;
 
-    // Lógica
     private ZKFingerprintManager fingerprintManager;
     private HuellaDAO huellaDAO;
     private EmpleadoDAO empleadoDAO;
     private UsuarioDAO usuarioDAO;
     private String cedulaActual;
-    private Runnable onCerrar; // Callback cuando se cierra
+    private Runnable onCerrar;
 
     public RegistroHuellaFrame(ZKFingerprintManager manager) {
         this.fingerprintManager = manager;
@@ -70,9 +55,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         initComponents();
     }
 
-    /**
-     * Establece un callback para cuando se cierre esta ventana.
-     */
     public void setOnCerrar(Runnable callback) {
         this.onCerrar = callback;
     }
@@ -84,7 +66,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // === Banner superior (rojo UTA) ===
         JPanel panelTitulo = new JPanel();
         panelTitulo.setBackground(COLOR_UTA);
         panelTitulo.setLayout(new BoxLayout(panelTitulo, BoxLayout.Y_AXIS));
@@ -107,7 +88,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         panelTitulo.add(lblDesc);
         add(panelTitulo, BorderLayout.NORTH);
 
-        // === Panel Central ===
         JPanel panelCentral = new JPanel();
         panelCentral.setLayout(new BoxLayout(panelCentral, BoxLayout.Y_AXIS));
         panelCentral.setBorder(BorderFactory.createCompoundBorder(
@@ -115,7 +95,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
             BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(COLOR_UTA), "Datos del Empleado")));
 
-        // Búsqueda de empleado
         JLabel lblCedula = new JLabel("Cédula del Empleado");
         lblCedula.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblCedula.setForeground(COLOR_TEXTO_SEC);
@@ -140,13 +119,11 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         panelBusqueda.add(Box.createRigidArea(new Dimension(10, 0)));
         panelBusqueda.add(btnBuscar);
 
-        // Nombre del empleado encontrado
         lblNombreEmpleado = new JLabel(" ");
         lblNombreEmpleado.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblNombreEmpleado.setForeground(COLOR_TEXTO);
         lblNombreEmpleado.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Imagen de huella
         lblImagenHuella = new JLabel("(Huella)", SwingConstants.CENTER);
         lblImagenHuella.setPreferredSize(new Dimension(180, 200));
         lblImagenHuella.setMaximumSize(new Dimension(180, 200));
@@ -155,7 +132,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         lblImagenHuella.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblImagenHuella.setBorder(BorderFactory.createLineBorder(COLOR_BORDE));
 
-        // Barra de progreso
         progressBar = new JProgressBar(0, 3);
         progressBar.setValue(0);
         progressBar.setStringPainted(true);
@@ -165,19 +141,16 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
         progressBar.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Estado
         lblEstado = new JLabel("Busque un empleado para comenzar", SwingConstants.CENTER);
         lblEstado.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblEstado.setForeground(COLOR_TEXTO_SEC);
         lblEstado.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Progreso textual
         lblProgreso = new JLabel(" ", SwingConstants.CENTER);
         lblProgreso.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblProgreso.setForeground(COLOR_TEXTO_SEC);
         lblProgreso.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Botones
         JPanel panelBotones = new JPanel();
         panelBotones.setLayout(new BoxLayout(panelBotones, BoxLayout.X_AXIS));
         panelBotones.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -194,7 +167,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         panelBotones.add(Box.createRigidArea(new Dimension(10, 0)));
         panelBotones.add(btnCancelar);
 
-        // Agregar todo al panel
         panelCentral.add(lblCedula);
         panelCentral.add(Box.createRigidArea(new Dimension(0, 5)));
         panelCentral.add(panelBusqueda);
@@ -213,7 +185,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
 
         add(panelCentral, BorderLayout.CENTER);
 
-        // Callback al cerrar
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
@@ -223,10 +194,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
             }
         });
     }
-
-    // =============================================
-    // Lógica
-    // =============================================
 
     private void buscarEmpleado() {
         String cedula = txtCedula.getText().trim();
@@ -243,7 +210,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
             lblNombreEmpleado.setForeground(COLOR_EXITO);
             btnRegistrar.setEnabled(true);
 
-            // Verificar si ya tiene huella
             if (huellaDAO.tieneHuella(cedula)) {
                 lblEstado.setText("Este empleado ya tiene huella. Se reemplazará.");
                 lblEstado.setForeground(COLOR_WARNING);
@@ -299,10 +265,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         lblImagenHuella.setText("(Huella)");
     }
 
-    // =============================================
-    // HuellaListener
-    // =============================================
-
     @Override
     public void onCapturaExitosa(byte[] imagen, byte[] template, String base64) {
         try {
@@ -314,7 +276,7 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
                 lblImagenHuella.setIcon(new ImageIcon(scaled));
             }
         } catch (Exception e) {
-            // No es crítico
+
         }
     }
 
@@ -356,14 +318,12 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
         lblEstado.setText("¡Huella registrada exitosamente!");
         lblEstado.setForeground(COLOR_EXITO);
 
-        // Guardar en BD
         boolean ok = huellaDAO.guardarHuella(cedulaActual, templateBase64);
         if (ok) {
             lblProgreso.setText("Template guardado en la base de datos.");
-            // Agregar al cache del SDK
+
             fingerprintManager.agregarHuellaAlCache(cedulaActual, templateBase64);
 
-            // También crear/asegurar usuario si no existe
             UsuarioDAO uDao = new UsuarioDAO();
             if (uDao.buscarPorCedula(cedulaActual) == null) {
                 Empleado emp = empleadoDAO.buscarPorCedula(cedulaActual);
@@ -384,7 +344,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
             lblEstado.setForeground(COLOR_ERROR);
         }
 
-        // Reset para siguiente registro
         Timer t = new Timer(2000, e -> resetUI());
         t.setRepeats(false);
         t.start();
@@ -392,6 +351,6 @@ public class RegistroHuellaFrame extends JFrame implements HuellaListener {
 
     @Override
     public void onIdentificacionResultado(String cedula, int score) {
-        // No usado aquí
+
     }
 }

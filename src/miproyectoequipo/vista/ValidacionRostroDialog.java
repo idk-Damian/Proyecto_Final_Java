@@ -28,17 +28,17 @@ public class ValidacionRostroDialog extends JDialog {
     private RostroManager rostroManager;
     private Usuario usuarioObjetivo;
     private Empleado empleadoObjetivo;
-    
+
     private boolean validado = false;
     private boolean isRunning = true;
 
     public ValidacionRostroDialog(JFrame parent, Usuario usuario) {
         super(parent, "Validación Facial", true);
         this.usuarioObjetivo = usuario;
-        
+
         EmpleadoDAO dao = new EmpleadoDAO();
         this.empleadoObjetivo = dao.buscarPorCedula(usuario.getCedula());
-        
+
         this.rostroManager = new RostroManager();
 
         setSize(500, 500);
@@ -92,14 +92,14 @@ public class ValidacionRostroDialog extends JDialog {
                     if (faces.size() > 0) {
                         Rect rect = faces.get(0);
                         Mat faceMat = new Mat(matImage, rect);
-                        
+
                         int idReconocido = rostroManager.reconocerRostro(faceMat);
-                        
+
                         if (empleadoObjetivo != null && idReconocido == empleadoObjetivo.getId()) {
                             matchCount++;
-                            rectangle(matImage, rect, new org.bytedeco.opencv.opencv_core.Scalar(0, 255, 0, 0), 2, 8, 0); // Verde
-                            
-                            if (matchCount >= 5) { // Necesita 5 frames consecutivos confirmados
+                            rectangle(matImage, rect, new org.bytedeco.opencv.opencv_core.Scalar(0, 255, 0, 0), 2, 8, 0);
+
+                            if (matchCount >= 5) {
                                 validado = true;
                                 isRunning = false;
                                 SwingUtilities.invokeLater(() -> {
@@ -112,7 +112,7 @@ public class ValidacionRostroDialog extends JDialog {
                             }
                         } else {
                             matchCount = 0;
-                            rectangle(matImage, rect, new org.bytedeco.opencv.opencv_core.Scalar(0, 0, 255, 0), 2, 8, 0); // Rojo
+                            rectangle(matImage, rect, new org.bytedeco.opencv.opencv_core.Scalar(0, 0, 255, 0), 2, 8, 0);
                         }
                     } else {
                         matchCount = 0;

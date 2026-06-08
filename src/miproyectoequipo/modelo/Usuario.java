@@ -1,15 +1,6 @@
-/*
- * Modelo: Usuario del sistema
- * Vincula un empleado con su perfil de acceso y huella digital
- */
+
 package miproyectoequipo.modelo;
 
-/**
- * Representa un usuario del sistema con su perfil de acceso.
- * Cada usuario está vinculado a un empleado por su cédula.
- * 
- * @author Vladimir
- */
 public class Usuario {
 
     public enum Perfil {
@@ -20,9 +11,9 @@ public class Usuario {
     private int id;
     private String cedula;
     private String nombre;
-    private String usuario;   // nombre de usuario para login
-    private String email;     // correo para login
-    private String contrasena; // fallback si no hay lector
+    private String usuario;
+    private String email;
+    private String contrasena;
     private Perfil perfil;
     private boolean activo;
 
@@ -48,7 +39,6 @@ public class Usuario {
         this.activo = true;
     }
 
-    // Getters y Setters
     public int getId() {
         return id;
     }

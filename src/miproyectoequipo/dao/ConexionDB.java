@@ -8,15 +8,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
 
-/**
- * Gestor de conexión a la base de datos MySQL (Patrón Singleton).
- * Lee las credenciales de db.properties y asegura que las tablas existan.
- */
 public class ConexionDB {
 
     private static ConexionDB instancia;
     private Connection conexion;
-    
+
     private String url;
     private String user;
     private String password;
@@ -60,7 +56,7 @@ public class ConexionDB {
     }
 
     public Connection getConexion() {
-        conectar(); // Re-conecta si se cerró
+        conectar();
         return conexion;
     }
 
@@ -74,18 +70,15 @@ public class ConexionDB {
         }
     }
 
-    /**
-     * Crea las tablas necesarias en MySQL si no existen.
-     */
     public void inicializarTablas() {
         String sqlUsuarios = "CREATE TABLE IF NOT EXISTS usuarios ("
                 + "id INT AUTO_INCREMENT PRIMARY KEY, "
                 + "cedula VARCHAR(20) UNIQUE NOT NULL, "
                 + "nombre VARCHAR(100) NOT NULL, "
-                + "usuario VARCHAR(50), " // nombre de usuario para login
-                + "email VARCHAR(100), "  // correo para login
+                + "usuario VARCHAR(50), "
+                + "email VARCHAR(100), "
                 + "contrasena VARCHAR(255) NOT NULL, "
-                + "perfil VARCHAR(20) NOT NULL, " // ADMINISTRADOR o EMPLEADO
+                + "perfil VARCHAR(20) NOT NULL, "
                 + "activo BOOLEAN DEFAULT TRUE)";
 
         String sqlEmpleados = "CREATE TABLE IF NOT EXISTS empleados ("
@@ -94,7 +87,7 @@ public class ConexionDB {
                 + "nombre VARCHAR(100) NOT NULL, "
                 + "apellido VARCHAR(100) NOT NULL, "
                 + "cargo VARCHAR(100), "
-                + "tipo_contrato VARCHAR(20) NOT NULL, " // TIEMPO_COMPLETO o TIEMPO_PARCIAL
+                + "tipo_contrato VARCHAR(20) NOT NULL, "
                 + "activo BOOLEAN DEFAULT TRUE)";
 
         String sqlHuellas = "CREATE TABLE IF NOT EXISTS huellas_digitales ("
@@ -115,11 +108,9 @@ public class ConexionDB {
                 + "minutos_atraso INT DEFAULT 0, "
                 + "FOREIGN KEY (cedula_empleado) REFERENCES empleados(cedula) ON DELETE CASCADE)";
 
-        // Insertar usuario administrador por defecto si no existe
         String sqlAdmin = "INSERT IGNORE INTO usuarios (cedula, nombre, usuario, email, contrasena, perfil) "
                 + "VALUES ('admin', 'Administrador Sistema', 'admin', 'admin@uta.edu.ec', 'admin123', 'ADMINISTRADOR')";
 
-        // Insertar empleados de prueba
         String sqlEmpTCUser = "INSERT IGNORE INTO usuarios (cedula, nombre, contrasena, perfil) "
                 + "VALUES ('12345', 'Juan Perez', 'emp123', 'EMPLEADO')";
         String sqlEmpTCEmpleado = "INSERT IGNORE INTO empleados (cedula, nombre, apellido, cargo, tipo_contrato) "
@@ -145,7 +136,6 @@ public class ConexionDB {
             stmt.execute(sqlHuellas);
             stmt.execute(sqlAsistencias);
 
-            // Migración: agregar columnas usuario/email a tablas ya existentes (se ignora si ya existen)
             agregarColumnaSiNoExiste(stmt, "usuarios", "usuario", "VARCHAR(50)");
             agregarColumnaSiNoExiste(stmt, "usuarios", "email", "VARCHAR(100)");
 
@@ -160,16 +150,12 @@ public class ConexionDB {
         }
     }
 
-    /**
-     * Agrega una columna a una tabla si aún no existe. Si la columna ya existe,
-     * la base de datos lanza un error que se ignora silenciosamente (migración idempotente).
-     */
     private void agregarColumnaSiNoExiste(Statement stmt, String tabla, String columna, String tipo) {
         try {
             stmt.execute("ALTER TABLE " + tabla + " ADD COLUMN " + columna + " " + tipo);
             System.out.println("[DB] Columna '" + columna + "' agregada a la tabla '" + tabla + "'.");
         } catch (SQLException e) {
-            // La columna ya existe: no es un error real, continuar.
+
         }
     }
 }

@@ -1,9 +1,4 @@
-/*
- * Vista: Pantalla de Login con autenticación por huella dactilar
- * Permite login por huella ZKTeco, rostro o por cédula/contraseña (fallback).
- *
- * Diseño: Swing nativo con identidad institucional UTA (rojo vinotinto).
- */
+
 package miproyectoequipo.vista;
 
 import java.awt.*;
@@ -20,16 +15,8 @@ import miproyectoequipo.huella.HuellaListener;
 import miproyectoequipo.huella.ZKFingerprintManager;
 import miproyectoequipo.modelo.Usuario;
 
-/**
- * Pantalla de inicio de sesión.
- * Modo principal: autenticación por huella dactilar (ZKTeco ZK9500).
- * Modos alternativos: reconocimiento facial y cédula + contraseña.
- *
- * @author Vladimir
- */
 public class LoginFrame extends JFrame implements HuellaListener {
 
-    // Paleta institucional UTA sobre Look & Feel nativo
     private static final Color COLOR_UTA = new Color(122, 0, 30);
     private static final Color COLOR_UTA_OSCURO = new Color(90, 0, 22);
     private static final Color COLOR_BORDE = new Color(190, 190, 190);
@@ -38,7 +25,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
     private static final Color COLOR_TEXTO = Color.BLACK;
     private static final Color COLOR_TEXTO_SEC = new Color(90, 90, 90);
 
-    // Componentes
     private JLabel lblEstadoHuella;
     private JLabel lblImagenHuella;
     private JLabel lblMensaje;
@@ -53,12 +39,11 @@ public class LoginFrame extends JFrame implements HuellaListener {
     private JPanel panelCentral;
     private JLabel lblVideoRostro;
 
-    // Lógica
     private ZKFingerprintManager fingerprintManager;
     private miproyectoequipo.rostro.RostroManager rostroManager;
     private org.bytedeco.javacv.OpenCVFrameGrabber grabberRostro;
     private boolean camaraRostroCorriendo = false;
-    private int modoActual = 0; // 0=HUELLA, 1=MANUAL, 2=ROSTRO
+    private int modoActual = 0;
 
     private UsuarioDAO usuarioDAO;
     private miproyectoequipo.dao.EmpleadoDAO empleadoDAO;
@@ -73,8 +58,8 @@ public class LoginFrame extends JFrame implements HuellaListener {
         fingerprintManager = new ZKFingerprintManager();
         fingerprintManager.setListener(this);
 
-        initComponents(); // Método generado por NetBeans
-        initCustomComponents(); // Nuestro diseño personalizado
+        initComponents();
+        initCustomComponents();
         intentarConectarLector();
     }
 
@@ -86,7 +71,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("Sistema de Asistencia - Iniciar Sesion");
 
-        lblTitulo.setFont(new java.awt.Font("Segoe UI", 1, 24)); // NOI18N
+        lblTitulo.setFont(new java.awt.Font("Segoe UI", 1, 24));
         lblTitulo.setText("Sistema de Asistencia");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -111,7 +96,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
     }// </editor-fold>//GEN-END:initComponents
 
     private void initCustomComponents() {
-        // Limpiamos el diseño auto-generado para poner el nuestro
+
         getContentPane().removeAll();
         setTitle("Universidad Técnica de Ambato - Iniciar Sesión");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -120,7 +105,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
         setResizable(false);
         setLayout(new BorderLayout());
 
-        // === Banner superior (rojo UTA) ===
         JPanel panelTitulo = new JPanel();
         panelTitulo.setBackground(COLOR_UTA);
         panelTitulo.setLayout(new BoxLayout(panelTitulo, BoxLayout.Y_AXIS));
@@ -143,7 +127,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
         panelTitulo.add(lblSubtitulo);
         add(panelTitulo, BorderLayout.NORTH);
 
-        // === Panel Central con CardLayout ===
         cardLayout = new CardLayout();
         panelCentral = new JPanel(cardLayout);
 
@@ -157,7 +140,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
 
         add(panelCentral, BorderLayout.CENTER);
 
-        // === Panel Inferior: selección de modo + estado ===
         JPanel panelInferior = new JPanel();
         panelInferior.setLayout(new BoxLayout(panelInferior, BoxLayout.Y_AXIS));
         panelInferior.setBorder(BorderFactory.createEmptyBorder(8, 40, 18, 40));
@@ -186,7 +168,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
 
         add(panelInferior, BorderLayout.SOUTH);
 
-        // Cerrar recursos al salir
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -199,9 +180,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
         });
     }
 
-    /**
-     * Crea el panel de login por huella dactilar (estilo nativo).
-     */
     private JPanel crearPanelHuella() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -239,9 +217,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
         return panel;
     }
 
-    /**
-     * Crea el panel de login manual (cédula + contraseña) e incluye el registro de usuarios.
-     */
     private JPanel crearPanelManual() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -275,7 +250,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
         btnRegistrar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
         btnRegistrar.addActionListener(e -> mostrarDialogoRegistro());
 
-        // Enter para login
         txtContrasena.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -304,9 +278,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
         return panel;
     }
 
-    /**
-     * Crea el panel de login por reconocimiento facial (estilo nativo).
-     */
     private JPanel crearPanelRostro() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createCompoundBorder(
@@ -411,32 +382,21 @@ public class LoginFrame extends JFrame implements HuellaListener {
         }
     }
 
-    // =============================================
-    // Lógica de autenticación
-    // =============================================
-
-    /**
-     * Intenta conectar al lector de huellas.
-     */
     private void intentarConectarLector() {
         lblEstadoHuella.setText("Conectando al lector...");
         lblEstadoHuella.setForeground(COLOR_TEXTO);
         btnConectarLector.setVisible(false);
 
-        // Conectar en hilo separado para no bloquear UI
         new Thread(() -> {
             boolean ok = fingerprintManager.iniciar();
             if (ok) {
-                // Cargar huellas de la BD al cache del SDK
+
                 Map<String, String> huellas = huellaDAO.obtenerTodasHuellas();
                 fingerprintManager.cargarHuellasEnCache(huellas);
             }
         }, "LectorInit").start();
     }
 
-    /**
-     * Login manual con cédula y contraseña.
-     */
     private void loginManual() {
         String cedula = txtCedula.getText().trim();
         String contrasena = new String(txtContrasena.getPassword());
@@ -455,10 +415,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
         }
     }
 
-    /**
-     * Diálogo de registro escrito de un nuevo usuario del sistema.
-     * Si el perfil es EMPLEADO también se crea su ficha de empleado.
-     */
     private void mostrarDialogoRegistro() {
         JTextField txtCed = new JTextField();
         JTextField txtNom = new JTextField();
@@ -523,7 +479,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
             return;
         }
 
-        // Si el usuario es empleado, también creamos su ficha de empleado
         if (perfil == Usuario.Perfil.EMPLEADO) {
             miproyectoequipo.modelo.Empleado.TipoContrato tipo =
                 miproyectoequipo.modelo.Empleado.TipoContrato.valueOf((String) cmbTipo.getSelectedItem());
@@ -541,14 +496,10 @@ public class LoginFrame extends JFrame implements HuellaListener {
             + "\n\nYa puede iniciar sesión.",
             "Registro exitoso", JOptionPane.INFORMATION_MESSAGE);
 
-        // Prellenar el formulario de login con la cédula registrada
         txtCedula.setText(ced);
         txtContrasena.requestFocusInWindow();
     }
 
-    /**
-     * Abre el panel principal con el usuario autenticado.
-     */
     private void abrirPanelPrincipal(Usuario usuario) {
         if (fingerprintManager.isActivo()) {
             fingerprintManager.cerrar();
@@ -563,7 +514,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
     private void cambiarModo(int modoSeleccionado) {
         modoActual = modoSeleccionado;
 
-        // Detener cámara si salimos del modo Rostro
         if (modoActual != 2) {
             detenerCamaraLogin();
         }
@@ -582,19 +532,14 @@ public class LoginFrame extends JFrame implements HuellaListener {
         lblMensaje.setText(msg);
         lblMensaje.setForeground(color);
 
-        // Auto-limpiar después de 5 segundos
         Timer t = new Timer(5000, e -> lblMensaje.setText(" "));
         t.setRepeats(false);
         t.start();
     }
 
-    // =============================================
-    // HuellaListener - Callbacks del lector
-    // =============================================
-
     @Override
     public void onCapturaExitosa(byte[] imagen, byte[] template, String base64) {
-        // Mostrar imagen de la huella capturada
+
         try {
             fingerprintManager.guardarImagenBMP(imagen, "temp_fingerprint.bmp");
             BufferedImage img = ImageIO.read(new File("temp_fingerprint.bmp"));
@@ -604,7 +549,7 @@ public class LoginFrame extends JFrame implements HuellaListener {
                 lblImagenHuella.setIcon(new ImageIcon(scaled));
             }
         } catch (Exception e) {
-            // No es crítico si falla la visualización
+
         }
     }
 
@@ -630,18 +575,18 @@ public class LoginFrame extends JFrame implements HuellaListener {
         lblEstadoHuella.setForeground(COLOR_ERROR);
         btnConectarLector.setVisible(true);
         mostrarMensaje("Sin lector. Use el inicio de sesión manual.", COLOR_TEXTO_SEC);
-        // Cambiar automáticamente al modo manual
+
         cardLayout.show(panelCentral, "MANUAL");
     }
 
     @Override
     public void onProgresoEnroll(int capturaActual, int totalCapturas) {
-        // No usado en login, solo en registro
+
     }
 
     @Override
     public void onEnrollCompleto(String templateBase64) {
-        // No usado en login
+
     }
 
     @Override
@@ -651,11 +596,10 @@ public class LoginFrame extends JFrame implements HuellaListener {
             lblEstadoHuella.setText("Huella reconocida - Bienvenido");
             lblEstadoHuella.setForeground(COLOR_EXITO);
 
-            // Buscar usuario por cédula
             Usuario usuario = usuarioDAO.buscarPorCedula(cedula);
             if (usuario != null) {
                 mostrarMensaje("Bienvenido, " + usuario.getNombre() + " (Score: " + score + ")", COLOR_EXITO);
-                // Dar un momento para que el usuario vea el mensaje
+
                 Timer t = new Timer(1000, e -> abrirPanelPrincipal(usuario));
                 t.setRepeats(false);
                 t.start();
@@ -667,7 +611,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
             lblEstadoHuella.setText("Huella no reconocida");
             lblEstadoHuella.setForeground(COLOR_ERROR);
 
-            // Restaurar mensaje después de 2 segundos
             Timer t = new Timer(2000, e -> {
                 if (lectorConectado) {
                     lblEstadoHuella.setText("Coloque su dedo en el lector");
@@ -678,10 +621,6 @@ public class LoginFrame extends JFrame implements HuellaListener {
             t.start();
         }
     }
-
-    // =============================================
-    // Utilidades de UI
-    // =============================================
 
     private JTextField crearCampoTexto() {
         JTextField field = new JTextField();

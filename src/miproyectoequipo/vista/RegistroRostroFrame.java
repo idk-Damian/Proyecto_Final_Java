@@ -23,11 +23,11 @@ public class RegistroRostroFrame extends JFrame {
     private JLabel lblVideo;
     private JButton btnCapturar;
     private JLabel lblInfo;
-    
+
     private OpenCVFrameGrabber grabber;
     private RostroManager rostroManager;
     private Empleado empleado;
-    
+
     private boolean isCapturing = false;
     private int numMuestras = 0;
     private final int MUESTRAS_OBJETIVO = 20;
@@ -35,7 +35,7 @@ public class RegistroRostroFrame extends JFrame {
     public RegistroRostroFrame(Empleado empleado) {
         this.empleado = empleado;
         this.rostroManager = new RostroManager();
-        
+
         setTitle("Registro Facial - " + empleado.getNombre());
         setSize(640, 560);
         setLocationRelativeTo(null);
@@ -49,7 +49,7 @@ public class RegistroRostroFrame extends JFrame {
         JPanel panelSur = new JPanel(new FlowLayout());
         btnCapturar = new JButton("Iniciar Captura de Muestras");
         lblInfo = new JLabel("Muestras: 0 / " + MUESTRAS_OBJETIVO);
-        
+
         panelSur.add(btnCapturar);
         panelSur.add(lblInfo);
         add(panelSur, BorderLayout.SOUTH);
@@ -72,7 +72,7 @@ public class RegistroRostroFrame extends JFrame {
     private void startCamera() {
         new Thread(() -> {
             try {
-                grabber = new OpenCVFrameGrabber(0); // Camara por defecto
+                grabber = new OpenCVFrameGrabber(0);
                 grabber.start();
 
                 OpenCVFrameConverter.ToMat converterMat = new OpenCVFrameConverter.ToMat();
@@ -85,21 +85,18 @@ public class RegistroRostroFrame extends JFrame {
                     Mat matImage = converterMat.convert(frame);
                     if (matImage == null) continue;
 
-                    // Detectar rostro
                     RectVector faces = rostroManager.detectarRostros(matImage);
 
-                    // Si estamos capturando y hay un rostro visible
                     if (isCapturing && faces.size() == 1) {
                         Rect rect = faces.get(0);
                         Mat faceMat = new Mat(matImage, rect);
-                        
-                        // Resize to 160x160
+
                         Mat resizedFace = new Mat();
                         org.bytedeco.opencv.global.opencv_imgproc.resize(faceMat, resizedFace, new Size(160, 160));
 
                         numMuestras++;
                         rostroManager.guardarRostro(resizedFace, empleado.getId(), numMuestras);
-                        
+
                         SwingUtilities.invokeLater(() -> {
                             lblInfo.setText("Muestras: " + numMuestras + " / " + MUESTRAS_OBJETIVO);
                         });
@@ -110,9 +107,9 @@ public class RegistroRostroFrame extends JFrame {
                                 btnCapturar.setText("Completado");
                                 JOptionPane.showMessageDialog(this, "Muestras capturadas. Entrenando modelo...");
                             });
-                            
+
                             rostroManager.entrenarModelo();
-                            
+
                             SwingUtilities.invokeLater(() -> {
                                 JOptionPane.showMessageDialog(this, "Modelo facial entrenado exitosamente.");
                                 stopCamera();
@@ -122,7 +119,6 @@ public class RegistroRostroFrame extends JFrame {
                         }
                     }
 
-                    // Dibujar rectángulo rojo sobre el rostro en pantalla
                     for (int i = 0; i < faces.size(); i++) {
                         Rect r = faces.get(i);
                         rectangle(matImage, r, new org.bytedeco.opencv.opencv_core.Scalar(0, 0, 255, 0), 2, 8, 0);

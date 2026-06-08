@@ -1,10 +1,4 @@
-/*
- * Vista: Diálogo de validación de identidad por huella dactilar.
- * Espera a que el empleado coloque su dedo y verifica que la huella leída
- * corresponda a la cédula que se está marcando (identificación 1:N real).
- *
- * Diseño: Swing nativo con identidad institucional UTA (rojo vinotinto).
- */
+
 package miproyectoequipo.vista;
 
 import java.awt.*;
@@ -18,12 +12,6 @@ import miproyectoequipo.dao.HuellaDAO;
 import miproyectoequipo.huella.HuellaListener;
 import miproyectoequipo.huella.ZKFingerprintManager;
 
-/**
- * Diálogo modal que valida la huella dactilar contra una cédula esperada.
- * Usa el lector ZKTeco real: no se valida hasta que el SDK identifique la huella.
- *
- * @author Vladimir
- */
 public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
 
     private static final Color COLOR_UTA = new Color(122, 0, 30);
@@ -50,7 +38,6 @@ public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
         setLocationRelativeTo(parent);
         setLayout(new BorderLayout());
 
-        // Banner UTA
         JLabel banner = new JLabel("Validación por Huella Dactilar", SwingConstants.CENTER);
         banner.setOpaque(true);
         banner.setBackground(COLOR_UTA);
@@ -101,10 +88,8 @@ public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
             }
         });
 
-        // El diálogo escucha los eventos del lector
         manager.setListener(this);
 
-        // Asegurar lector conectado y cache de huellas cargado, en segundo plano
         new Thread(() -> {
             if (!manager.isActivo()) {
                 boolean ok = manager.iniciar();
@@ -130,7 +115,7 @@ public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
     private void finalizar() {
         if (cerrado) return;
         cerrado = true;
-        // Dejamos de escuchar para no interferir con otras pantallas
+
         manager.setListener(null);
     }
 
@@ -139,10 +124,6 @@ public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
         finalizar();
         super.dispose();
     }
-
-    // =============================================
-    // HuellaListener
-    // =============================================
 
     @Override
     public void onIdentificacionResultado(String cedula, int score) {
@@ -171,7 +152,7 @@ public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
 
     @Override
     public void onCapturaExitosa(byte[] imagen, byte[] template, String base64) {
-        // Mostrar la imagen de la huella capturada (igual que en el login)
+
         try {
             manager.guardarImagenBMP(imagen, "temp_fingerprint.bmp");
             BufferedImage img = ImageIO.read(new File("temp_fingerprint.bmp"));
@@ -181,7 +162,7 @@ public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
                 lblImagenHuella.setIcon(new ImageIcon(scaled));
             }
         } catch (Exception e) {
-            // No es crítico si falla la visualización
+
         }
     }
 
@@ -192,11 +173,11 @@ public class ValidacionHuellaDialog extends JDialog implements HuellaListener {
 
     @Override
     public void onProgresoEnroll(int capturaActual, int totalCapturas) {
-        // No aplica en validación
+
     }
 
     @Override
     public void onEnrollCompleto(String templateBase64) {
-        // No aplica en validación
+
     }
 }

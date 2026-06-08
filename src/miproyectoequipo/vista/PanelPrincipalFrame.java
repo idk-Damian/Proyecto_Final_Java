@@ -1,10 +1,4 @@
-/*
- * Vista: Panel Principal (Dashboard)
- * Muestra opciones según el perfil del usuario (Admin/Empleado)
- * Provee CRUD completo de empleados, registro de asistencia y consultas/reportes detallados.
- *
- * Diseño: Swing nativo con identidad institucional UTA (rojo vinotinto).
- */
+
 package miproyectoequipo.vista;
 
 import java.awt.*;
@@ -25,16 +19,8 @@ import miproyectoequipo.dao.*;
 import miproyectoequipo.huella.ZKFingerprintManager;
 import miproyectoequipo.modelo.*;
 
-/**
- * Dashboard principal del sistema.
- * Admin: acceso total (registrar huellas, gestionar empleados, reportes de todos).
- * Empleado: registrar asistencia y ver reportes propios.
- *
- * @author Vladimir
- */
 public class PanelPrincipalFrame extends JFrame {
 
-    // Paleta institucional UTA (rojo vinotinto) sobre Look & Feel nativo
     private static final Color COLOR_UTA = new Color(122, 0, 30);
     private static final Color COLOR_UTA_OSCURO = new Color(90, 0, 22);
     private static final Color COLOR_EXITO = new Color(0, 128, 0);
@@ -42,7 +28,6 @@ public class PanelPrincipalFrame extends JFrame {
     private static final Color COLOR_TEXTO = Color.BLACK;
     private static final Color COLOR_GRIS = new Color(90, 90, 90);
 
-    // Estado
     private final Usuario usuarioActual;
     private final ZKFingerprintManager fingerprintManager;
     private JPanel panelContenido;
@@ -50,7 +35,6 @@ public class PanelPrincipalFrame extends JFrame {
     private JLabel lblReloj;
     private Timer relojTimer;
 
-    // Componentes de CRUD Empleados
     private JTable tablaEmpleados;
     private JTextField txtCrudCedula;
     private JTextField txtCrudNombre;
@@ -74,13 +58,10 @@ public class PanelPrincipalFrame extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // === Banner superior (rojo UTA) ===
         add(crearBanner(), BorderLayout.NORTH);
 
-        // === Menú lateral ===
         add(crearMenuLateral(), BorderLayout.WEST);
 
-        // === Contenido principal ===
         cardLayout = new CardLayout();
         panelContenido = new JPanel(cardLayout);
 
@@ -92,7 +73,6 @@ public class PanelPrincipalFrame extends JFrame {
 
         add(panelContenido, BorderLayout.CENTER);
 
-        // Cerrar recursos al salir
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -105,9 +85,6 @@ public class PanelPrincipalFrame extends JFrame {
         });
     }
 
-    /**
-     * Banner superior con identidad UTA, datos del usuario y reloj.
-     */
     private JPanel crearBanner() {
         JPanel banner = new JPanel(new BorderLayout());
         banner.setBackground(COLOR_UTA);
@@ -143,9 +120,6 @@ public class PanelPrincipalFrame extends JFrame {
         return banner;
     }
 
-    /**
-     * Menú lateral de navegación con botones nativos.
-     */
     private JScrollPane crearMenuLateral() {
         JPanel menu = new JPanel();
         menu.setLayout(new BoxLayout(menu, BoxLayout.Y_AXIS));
@@ -184,10 +158,6 @@ public class PanelPrincipalFrame extends JFrame {
         return sp;
     }
 
-    /**
-     * Panel de bienvenida.
-     * Las estadísticas globales (empleados/huellas) SOLO se muestran al Administrador.
-     */
     private JPanel crearPanelBienvenida() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -210,7 +180,6 @@ public class PanelPrincipalFrame extends JFrame {
         panel.add(lblFecha);
         panel.add(Box.createRigidArea(new Dimension(0, 25)));
 
-        // Estadísticas globales: exclusivas del Administrador
         if (usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR) {
             int totalEmpleados = new EmpleadoDAO().listarTodos().size();
             int totalHuellas = new HuellaDAO().obtenerTodasHuellas().size();
@@ -249,9 +218,6 @@ public class PanelPrincipalFrame extends JFrame {
         return panel;
     }
 
-    /**
-     * Panel unificado de Gestión de Empleados (CRUD completo). Solo Administrador.
-     */
     private JPanel crearPanelGestionEmpleados() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
@@ -259,7 +225,6 @@ public class PanelPrincipalFrame extends JFrame {
 
         panel.add(crearTituloSeccion("Gestión Integral de Empleados"), BorderLayout.NORTH);
 
-        // --- Izquierda: buscador + tabla ---
         JPanel panelIzquierda = new JPanel(new BorderLayout(0, 8));
         panelIzquierda.setOpaque(false);
 
@@ -291,7 +256,7 @@ public class PanelPrincipalFrame extends JFrame {
             int fila = tablaEmpleados.getSelectedRow();
             if (fila >= 0) {
                 txtCrudCedula.setText((String) tablaEmpleados.getValueAt(fila, 0));
-                txtCrudCedula.setEditable(false); // No editar la cédula (clave única)
+                txtCrudCedula.setEditable(false);
                 txtCrudNombre.setText((String) tablaEmpleados.getValueAt(fila, 1));
                 txtCrudApellido.setText((String) tablaEmpleados.getValueAt(fila, 2));
                 txtCrudCargo.setText((String) tablaEmpleados.getValueAt(fila, 3));
@@ -300,7 +265,6 @@ public class PanelPrincipalFrame extends JFrame {
         });
         panelIzquierda.add(new JScrollPane(tablaEmpleados), BorderLayout.CENTER);
 
-        // --- Derecha: formulario CRUD ---
         JPanel panelDerecha = new JPanel();
         panelDerecha.setLayout(new BoxLayout(panelDerecha, BoxLayout.Y_AXIS));
         panelDerecha.setPreferredSize(new Dimension(300, 0));
@@ -368,9 +332,6 @@ public class PanelPrincipalFrame extends JFrame {
         return panel;
     }
 
-    /**
-     * Panel de consultas e informes con pestañas.
-     */
     private JPanel crearPanelReportes() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
@@ -380,11 +341,115 @@ public class PanelPrincipalFrame extends JFrame {
 
         JTabbedPane tabs = new JTabbedPane();
         tabs.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        tabs.addTab("Reporte Mensual", crearSubPanelReporteMensual());
         tabs.addTab("Tiempo Completo", crearSubPanelReporteTC());
         tabs.addTab("Tiempo Parcial", crearSubPanelReporteTP());
         tabs.addTab("Asistencias por Rango", crearSubPanelAsistenciasFechas());
 
         panel.add(tabs, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel crearSubPanelReporteMensual() {
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBackground(Color.WHITE);
+
+        JPanel panelSuperior = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        panelSuperior.setOpaque(false);
+
+        JComboBox<String> cmbCedula = new JComboBox<>();
+        cmbCedula.setPreferredSize(new Dimension(240, 28));
+        prepararComboCedulasTodos(cmbCedula);
+
+        JComboBox<String> cmbMes = new JComboBox<>(MESES);
+        JComboBox<String> cmbAnio = new JComboBox<>(ANIOS);
+        JButton btnGenerar = new JButton("Generar Reporte");
+        JButton btnImprimir = new JButton("Imprimir");
+        btnImprimir.setEnabled(false);
+
+        panelSuperior.add(new JLabel("Empleado:"));
+        panelSuperior.add(cmbCedula);
+        panelSuperior.add(new JLabel("Mes:"));
+        panelSuperior.add(cmbMes);
+        panelSuperior.add(new JLabel("Año:"));
+        panelSuperior.add(cmbAnio);
+        panelSuperior.add(btnGenerar);
+        panelSuperior.add(btnImprimir);
+        panel.add(panelSuperior, BorderLayout.NORTH);
+
+        String[] columnas = {"Empleado", "Cédula", "Fecha", "Ent. Mañana", "Sal. Mañana", "Ent. Tarde", "Sal. Tarde", "Atraso (min)", "Horas"};
+        DefaultTableModel model = new DefaultTableModel(columnas, 0);
+        JTable tabla = new JTable(model);
+        estilizarTabla(tabla);
+        panel.add(new JScrollPane(tabla), BorderLayout.CENTER);
+
+        JPanel panelMetricas = new JPanel(new GridLayout(1, 3, 12, 0));
+        panelMetricas.setOpaque(false);
+        panelMetricas.setPreferredSize(new Dimension(0, 70));
+        JLabel valDias = new JLabel("—", SwingConstants.CENTER);
+        JLabel valAtraso = new JLabel("—", SwingConstants.CENTER);
+        JLabel valHoras = new JLabel("—", SwingConstants.CENTER);
+        panelMetricas.add(crearTarjetaMetrica("Días con Registro", valDias, COLOR_UTA));
+        panelMetricas.add(crearTarjetaMetrica("Total Atrasos", valAtraso, new Color(180, 120, 0)));
+        panelMetricas.add(crearTarjetaMetrica("Total Horas", valHoras, COLOR_EXITO));
+        panel.add(panelMetricas, BorderLayout.SOUTH);
+
+        cmbCedula.addActionListener(e -> {
+            model.setRowCount(0);
+            valDias.setText("—");
+            valAtraso.setText("—");
+            valHoras.setText("—");
+            btnImprimir.setEnabled(false);
+        });
+
+        btnGenerar.addActionListener(e -> {
+            String sel = (String) cmbCedula.getSelectedItem();
+            boolean todos = "TODOS LOS EMPLEADOS".equals(sel);
+            String cedula = todos ? null : extraerCedula(sel);
+            if (!todos && cedula == null) {
+                JOptionPane.showMessageDialog(this, "Debe seleccionar un empleado.", "Aviso", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            int mesNum = cmbMes.getSelectedIndex() + 1;
+            int anioNum = Integer.parseInt((String) cmbAnio.getSelectedItem());
+            LocalDate inicioMes = LocalDate.of(anioNum, mesNum, 1);
+            LocalDate finMes = inicioMes.withDayOfMonth(inicioMes.lengthOfMonth());
+
+            AsistenciaDAO asistDAO = new AsistenciaDAO();
+            EmpleadoDAO empDAO = new EmpleadoDAO();
+            List<RegistroAsistencia> registros = todos
+                ? asistDAO.listarTodosPorRango(inicioMes, finMes)
+                : asistDAO.listarPorCedulaYRango(cedula, inicioMes, finMes);
+
+            model.setRowCount(0);
+            int totalAtraso = 0;
+            double totalHoras = 0;
+            for (RegistroAsistencia r : registros) {
+                Empleado emp = empDAO.buscarPorCedula(r.getCedulaEmpleado());
+                totalAtraso += r.getMinutosAtraso();
+                totalHoras += r.calcularHorasTrabajadas();
+                model.addRow(new Object[]{
+                    emp != null ? emp.getNombreCompleto() : "Desconocido",
+                    r.getCedulaEmpleado(),
+                    r.getFecha().toString(),
+                    fmt(r.getHoraEntradaManana()), fmt(r.getHoraSalidaManana()),
+                    fmt(r.getHoraEntradaTarde()), fmt(r.getHoraSalidaTarde()),
+                    r.getMinutosAtraso() + " min",
+                    String.format("%.2f hrs", r.calcularHorasTrabajadas())
+                });
+            }
+
+            valDias.setText(String.valueOf(registros.size()));
+            valAtraso.setText(totalAtraso + " min");
+            valHoras.setText(String.format("%.2f hrs", totalHoras));
+            btnImprimir.setEnabled(model.getRowCount() > 0);
+        });
+
+        btnImprimir.addActionListener(e -> imprimirTabla(tabla,
+            "Reporte Mensual - " + cmbCedula.getSelectedItem()));
+
         return panel;
     }
 
@@ -422,7 +487,6 @@ public class PanelPrincipalFrame extends JFrame {
         estilizarTabla(tabla);
         panel.add(new JScrollPane(tabla), BorderLayout.CENTER);
 
-        // Métricas: inician vacías hasta generar un reporte válido
         JPanel panelMetricas = new JPanel(new GridLayout(1, 4, 12, 0));
         panelMetricas.setOpaque(false);
         panelMetricas.setPreferredSize(new Dimension(0, 70));
@@ -436,7 +500,6 @@ public class PanelPrincipalFrame extends JFrame {
         panelMetricas.add(crearTarjetaMetrica("Sueldo Neto", valNeto, COLOR_EXITO));
         panel.add(panelMetricas, BorderLayout.SOUTH);
 
-        // Al cambiar de empleado se limpian los resultados previos
         cmbCedula.addActionListener(e -> {
             model.setRowCount(0);
             valBase.setText("—");
@@ -652,10 +715,6 @@ public class PanelPrincipalFrame extends JFrame {
         return panel;
     }
 
-    // =============================================
-    // CRUD Lógica y Auxiliares
-    // =============================================
-
     private void actualizarTablaEmpleados() {
         if (tablaEmpleados == null) return;
         DefaultTableModel model = (DefaultTableModel) tablaEmpleados.getModel();
@@ -696,7 +755,7 @@ public class PanelPrincipalFrame extends JFrame {
         Empleado emp = construirEmpleado(cedula, nombre, apellido, cargo);
         EmpleadoDAO dao = new EmpleadoDAO();
         if (dao.insertar(emp)) {
-            // También crear un usuario para que pueda iniciar sesión
+
             Usuario user = new Usuario(cedula, nombre + " " + apellido, "clave123", Usuario.Perfil.EMPLEADO);
             new UsuarioDAO().insertar(user);
             mostrarResultadoCrud("Registrado (Usuario: " + cedula + ", Clave: clave123)", true);
@@ -768,10 +827,6 @@ public class PanelPrincipalFrame extends JFrame {
         cmbCrudTipoContrato.setSelectedIndex(0);
     }
 
-    // =============================================
-    // Acciones Lector y Asistencia
-    // =============================================
-
     private void abrirRegistroHuella() {
         if (!fingerprintManager.isActivo()) {
             new Thread(() -> {
@@ -806,7 +861,7 @@ public class PanelPrincipalFrame extends JFrame {
     }
 
     private void registrarAsistencia() {
-        // 1. Determinar la cédula del empleado a marcar
+
         String cedula = usuarioActual.getCedula();
         if (usuarioActual.getPerfil() == Usuario.Perfil.ADMINISTRADOR) {
             String inputCedula = JOptionPane.showInputDialog(this, "Ingrese la cédula del empleado para registrar asistencia:", cedula);
@@ -820,7 +875,6 @@ public class PanelPrincipalFrame extends JFrame {
             return;
         }
 
-        // 2. El usuario SELECCIONA qué marcación desea registrar (ANTES de la biometría)
         AsistenciaDAO asistDAO = new AsistenciaDAO();
         LocalDate hoy = LocalDate.now();
         RegistroAsistencia reg = asistDAO.buscarPorCedulaYFecha(cedula, hoy);
@@ -848,9 +902,8 @@ public class PanelPrincipalFrame extends JFrame {
             JOptionPane.QUESTION_MESSAGE, null,
             disponibles.toArray(), sugerida);
 
-        if (marca == null) return; // El usuario canceló
+        if (marca == null) return;
 
-        // 3. Validación biométrica (DESPUÉS de elegir entrada/salida)
         Object[] metodos = {"Huella Dactilar", "Reconocimiento Facial"};
         int eleccion = JOptionPane.showOptionDialog(this,
             "Marcación seleccionada: " + marca + "\n\n"
@@ -863,7 +916,7 @@ public class PanelPrincipalFrame extends JFrame {
 
         boolean validado = false;
         if (eleccion == 0) {
-            // Validación REAL por huella: requiere que el empleado tenga huella registrada
+
             if (!new HuellaDAO().tieneHuella(cedula)) {
                 JOptionPane.showMessageDialog(this,
                     "Este empleado no tiene una huella registrada.\n"
@@ -885,7 +938,6 @@ public class PanelPrincipalFrame extends JFrame {
             return;
         }
 
-        // 4. Aplicar la marcación elegida
         LocalTime ahora = LocalTime.now();
         if (marca.equals("Entrada Mañana")) {
             reg.setHoraEntradaManana(ahora);
@@ -928,14 +980,6 @@ public class PanelPrincipalFrame extends JFrame {
         relojTimer.start();
     }
 
-    // =============================================
-    // Impresión nativa (sin dependencias externas)
-    // =============================================
-
-    /**
-     * Imprime el contenido de una tabla usando el motor de impresión nativo de Java.
-     * Muestra el diálogo del sistema, donde se puede imprimir o guardar como PDF.
-     */
     private void imprimirTabla(JTable tabla, String titulo) {
         if (tabla.getRowCount() == 0) {
             JOptionPane.showMessageDialog(this, "No hay datos para imprimir. Genere primero el reporte.", "Aviso", JOptionPane.WARNING_MESSAGE);
@@ -953,10 +997,6 @@ public class PanelPrincipalFrame extends JFrame {
         }
     }
 
-    // =============================================
-    // UI Helpers (Swing nativo)
-    // =============================================
-
     private static final String[] MESES = {
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
@@ -967,10 +1007,6 @@ public class PanelPrincipalFrame extends JFrame {
         return t != null ? t.toString() : "—";
     }
 
-    /**
-     * Llena un combo con los empleados del tipo indicado. Para el perfil EMPLEADO
-     * solo se ofrece su propia cédula. Se refresca cada vez que se abre el desplegable.
-     */
     private void prepararComboCedulas(JComboBox<String> combo, Empleado.TipoContrato filtro) {
         recargarComboCedulas(combo, filtro);
         if (usuarioActual.getPerfil() == Usuario.Perfil.EMPLEADO) {
@@ -984,6 +1020,35 @@ public class PanelPrincipalFrame extends JFrame {
             @Override public void popupMenuWillBecomeInvisible(javax.swing.event.PopupMenuEvent e) {}
             @Override public void popupMenuCanceled(javax.swing.event.PopupMenuEvent e) {}
         });
+    }
+
+    private void prepararComboCedulasTodos(JComboBox<String> combo) {
+        recargarComboCedulasTodos(combo);
+        if (usuarioActual.getPerfil() == Usuario.Perfil.EMPLEADO) {
+            combo.setEnabled(false);
+            return;
+        }
+        combo.addPopupMenuListener(new javax.swing.event.PopupMenuListener() {
+            @Override public void popupMenuWillBecomeVisible(javax.swing.event.PopupMenuEvent e) {
+                recargarComboCedulasTodos(combo);
+            }
+            @Override public void popupMenuWillBecomeInvisible(javax.swing.event.PopupMenuEvent e) {}
+            @Override public void popupMenuCanceled(javax.swing.event.PopupMenuEvent e) {}
+        });
+    }
+
+    private void recargarComboCedulasTodos(JComboBox<String> combo) {
+        Object sel = combo.getSelectedItem();
+        combo.removeAllItems();
+        if (usuarioActual.getPerfil() == Usuario.Perfil.EMPLEADO) {
+            combo.addItem(usuarioActual.getCedula());
+            return;
+        }
+        combo.addItem("TODOS LOS EMPLEADOS");
+        for (Empleado e : new EmpleadoDAO().listarTodos()) {
+            combo.addItem(e.getCedula() + " - " + e.getNombreCompleto());
+        }
+        if (sel != null) combo.setSelectedItem(sel);
     }
 
     private void recargarComboCedulas(JComboBox<String> combo, Empleado.TipoContrato filtro) {
@@ -1002,7 +1067,6 @@ public class PanelPrincipalFrame extends JFrame {
         if (sel != null) combo.setSelectedItem(sel);
     }
 
-    /** Extrae la cédula de un item "cedula - Nombre"; null si no hay selección válida. */
     private String extraerCedula(Object item) {
         if (item == null) return null;
         String s = item.toString().trim();
@@ -1088,10 +1152,6 @@ public class PanelPrincipalFrame extends JFrame {
         }
     }
 
-    /**
-     * Aplica un estilo consistente a una tabla y, sobre todo, fuerza encabezados
-     * de columna VISIBLES (fondo rojo UTA con texto blanco) en cualquier Look & Feel.
-     */
     private void estilizarTabla(JTable tabla) {
         tabla.setRowHeight(24);
         tabla.setFont(new Font("Segoe UI", Font.PLAIN, 13));

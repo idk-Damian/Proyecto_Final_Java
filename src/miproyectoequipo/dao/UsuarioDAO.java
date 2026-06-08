@@ -1,7 +1,4 @@
-/*
- * DAO: Operaciones de Usuario
- * CRUD + autenticación por cédula/contraseña
- */
+
 package miproyectoequipo.dao;
 
 import java.sql.*;
@@ -10,19 +7,8 @@ import java.util.List;
 import miproyectoequipo.modelo.Usuario;
 import miproyectoequipo.modelo.Usuario.Perfil;
 
-/**
- * DAO para la tabla usuarios.
- * Maneja CRUD y autenticación.
- * 
- * @author Vladimir
- */
 public class UsuarioDAO {
 
-    /**
-     * Inserta un nuevo usuario.
-     * @param usuario a insertar
-     * @return true si se insertó correctamente
-     */
     public boolean insertar(Usuario usuario) {
         String sql = "INSERT INTO usuarios (cedula, nombre, usuario, email, contrasena, perfil, activo) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
@@ -41,11 +27,6 @@ public class UsuarioDAO {
         }
     }
 
-    /**
-     * Busca un usuario por su cédula.
-     * @param cedula del usuario
-     * @return Usuario encontrado o null
-     */
     public Usuario buscarPorCedula(String cedula) {
         String sql = "SELECT * FROM usuarios WHERE cedula = ?";
         try (Connection conn = ConexionDB.getInstancia().getConexion();
@@ -61,12 +42,6 @@ public class UsuarioDAO {
         return null;
     }
 
-    /**
-     * Autenticación por identificador (cédula, correo o nombre de usuario) y contraseña.
-     * @param identificador cédula, correo o nombre de usuario
-     * @param contrasena del usuario
-     * @return Usuario autenticado o null
-     */
     public Usuario autenticar(String identificador, String contrasena) {
         String sql = "SELECT * FROM usuarios WHERE (cedula = ? OR email = ? OR usuario = ?) "
                    + "AND contrasena = ? AND activo = 1";
@@ -86,10 +61,6 @@ public class UsuarioDAO {
         return null;
     }
 
-    /**
-     * Lista todos los usuarios activos.
-     * @return lista de usuarios
-     */
     public List<Usuario> listarTodos() {
         List<Usuario> lista = new ArrayList<>();
         String sql = "SELECT * FROM usuarios WHERE activo = 1 ORDER BY nombre";
@@ -105,9 +76,6 @@ public class UsuarioDAO {
         return lista;
     }
 
-    /**
-     * Mapea un ResultSet a un objeto Usuario.
-     */
     private Usuario mapearUsuario(ResultSet rs) throws SQLException {
         Usuario u = new Usuario();
         u.setId(rs.getInt("id"));

@@ -1,7 +1,4 @@
-/*
- * Huella: Wrapper del SDK ZKTeco ZKFingerReader
- * Encapsula toda la interacción con el lector ZK9500
- */
+
 package miproyectoequipo.huella;
 
 import com.zkteco.biometric.FingerprintSensorErrorCode;
@@ -15,77 +12,47 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.swing.SwingUtilities;
 
-/**
- * Gestiona toda la interacción con el lector de huellas ZKTeco ZK9500.
- * Usa el SDK ZKFinger Standard 5.3.0.33 (ZKFingerReader.jar).
- *
- * Funcionalidades:
- * - Inicialización/cierre del dispositivo
- * - Captura continua de huellas en hilo separado
- * - Registro (Enroll) con 3 capturas + merge
- * - Verificación 1:1 (DBMatch)
- * - Identificación 1:N (DBIdentify)
- *
- * @author Vladimir
- */
 public class ZKFingerprintManager {
 
-    // Constantes del SDK
     private static final int TEMPLATE_SIZE = 2048;
-    private static final int ENROLL_COUNT = 3; // Capturas necesarias para registrar
+    private static final int ENROLL_COUNT = 3;
 
-    // Estado del dispositivo
-    private long mhDevice = 0;   // Handle del dispositivo
-    private long mhDB = 0;       // Handle de la base de datos interna del SDK
+    private long mhDevice = 0;
+    private long mhDB = 0;
     private boolean mbStop = true;
     private int fpWidth = 0;
     private int fpHeight = 0;
 
-    // Buffers
     private byte[] imgbuf = null;
     private byte[] template = new byte[TEMPLATE_SIZE];
     private int[] templateLen = new int[1];
 
-    // Para Enroll (registro)
     private boolean bEnrollando = false;
     private int enrollIdx = 0;
     private byte[][] enrollTemplates = new byte[ENROLL_COUNT][TEMPLATE_SIZE];
 
-    // Para Identificación - mapeo de FID a cédula
     private Map<Integer, String> fidToCedula = new HashMap<>();
     private int nextFid = 1;
 
-    // Listener de eventos
     private HuellaListener listener;
 
-    // Hilo de captura
     private Thread captureThread;
 
-    /**
-     * Establece el listener para recibir eventos del lector.
-     * @param listener implementación de HuellaListener
-     */
     public void setListener(HuellaListener listener) {
         this.listener = listener;
     }
 
-    /**
-     * Inicializa el SDK y abre el dispositivo.
-     * @return true si se inicializó correctamente
-     */
     public boolean iniciar() {
         if (mhDevice != 0) {
             notificarError("El dispositivo ya está abierto.");
             return false;
         }
 
-        // Inicializar SDK
         if (FingerprintSensorErrorCode.ZKFP_ERR_OK != FingerprintSensorEx.Init()) {
             notificarError("Error al inicializar el SDK ZKTeco. Verifique que el driver esté instalado.");
             return false;
         }
 
-        // Verificar dispositivos conectados
         int deviceCount = FingerprintSensorEx.GetDeviceCount();
         if (deviceCount < 1) {
             notificarError("No se detectó ningún lector de huellas. Conecte el ZK9500.");
@@ -93,7 +60,6 @@ public class ZKFingerprintManager {
             return false;
         }
 
-        // Abrir primer dispositivo
         mhDevice = FingerprintSensorEx.OpenDevice(0);
         if (mhDevice == 0) {
             notificarError("No se pudo abrir el lector de huellas.");
@@ -101,7 +67,6 @@ public class ZKFingerprintManager {
             return false;
         }
 
-        // Inicializar base de datos interna del SDK (para match/identify)
         mhDB = FingerprintSensorEx.DBInit();
         if (mhDB == 0) {
             notificarError("Error al inicializar la DB interna del SDK.");
@@ -111,7 +76,6 @@ public class ZKFingerprintManager {
             return false;
         }
 
-        // Obtener dimensiones de la imagen
         byte[] paramValue = new byte[4];
         int[] size = new int[]{4};
         FingerprintSensorEx.GetParameters(mhDevice, 1, paramValue, size);
@@ -122,7 +86,6 @@ public class ZKFingerprintManager {
 
         imgbuf = new byte[fpWidth * fpHeight];
 
-        // Iniciar hilo de captura
         mbStop = false;
         captureThread = new Thread(this::loopCaptura, "ZKFingerCapture");
         captureThread.setDaemon(true);
@@ -137,13 +100,9 @@ public class ZKFingerprintManager {
         return true;
     }
 
-    /**
-     * Carga huellas desde la BD al cache del SDK para identificación 1:N.
-     * @param huellas Map con cedula → templateBase64
-     */
     public void cargarHuellasEnCache(Map<String, String> huellas) {
         fidToCedula.clear();
-        // Limpiar DB anterior
+
         if (mhDB != 0) {
             FingerprintSensorEx.DBFree(mhDB);
             mhDB = FingerprintSensorEx.DBInit();
@@ -167,11 +126,6 @@ public class ZKFingerprintManager {
         System.out.println("[ZKFinger] Cache cargado con " + fidToCedula.size() + " huellas.");
     }
 
-    /**
-     * Agrega una huella al cache del SDK (sin recargar todas).
-     * @param cedula del empleado
-     * @param templateBase64 template en Base64
-     */
     public void agregarHuellaAlCache(String cedula, String templateBase64) {
         byte[] templateBytes = Base64.getDecoder().decode(templateBase64);
         int ret = FingerprintSensorEx.DBAdd(mhDB, nextFid, templateBytes);
@@ -182,47 +136,28 @@ public class ZKFingerprintManager {
         }
     }
 
-    /**
-     * Inicia el proceso de registro de huella (Enroll).
-     * Se necesitan 3 capturas del mismo dedo.
-     */
     public void iniciarEnroll() {
         enrollIdx = 0;
         bEnrollando = true;
         System.out.println("[ZKFinger] Modo Enroll activado. Coloque el dedo 3 veces.");
     }
 
-    /**
-     * Cancela el proceso de Enroll actual.
-     */
     public void cancelarEnroll() {
         bEnrollando = false;
         enrollIdx = 0;
     }
 
-    /**
-     * Verifica si el modo Enroll está activo.
-     * @return true si está enrollando
-     */
     public boolean isEnrollando() {
         return bEnrollando;
     }
 
-    /**
-     * Verifica si el dispositivo está conectado y activo.
-     * @return true si está activo
-     */
     public boolean isActivo() {
         return mhDevice != 0 && !mbStop;
     }
 
-    /**
-     * Cierra el dispositivo y libera recursos.
-     */
     public void cerrar() {
         mbStop = true;
 
-        // Esperar a que el hilo termine
         if (captureThread != null) {
             try {
                 captureThread.join(2000);
@@ -245,14 +180,6 @@ public class ZKFingerprintManager {
         System.out.println("[ZKFinger] Dispositivo cerrado.");
     }
 
-    // =============================================
-    // Hilo de captura continua
-    // =============================================
-
-    /**
-     * Loop principal de captura. Corre en un hilo separado.
-     * Detecta cuando se coloca un dedo y procesa la huella.
-     */
     private void loopCaptura() {
         while (!mbStop) {
             templateLen[0] = TEMPLATE_SIZE;
@@ -260,20 +187,18 @@ public class ZKFingerprintManager {
             int ret = FingerprintSensorEx.AcquireFingerprint(mhDevice, imgbuf, template, templateLen);
 
             if (ret == FingerprintSensorErrorCode.ZKFP_ERR_OK) {
-                // Huella capturada exitosamente
+
                 byte[] capturedTemplate = new byte[templateLen[0]];
                 System.arraycopy(template, 0, capturedTemplate, 0, templateLen[0]);
 
                 String base64 = FingerprintSensorEx.BlobToBase64(template, templateLen[0]);
 
-                // Notificar captura al listener
                 if (listener != null) {
                     byte[] imgCopy = new byte[imgbuf.length];
                     System.arraycopy(imgbuf, 0, imgCopy, 0, imgbuf.length);
                     SwingUtilities.invokeLater(() -> listener.onCapturaExitosa(imgCopy, capturedTemplate, base64));
                 }
 
-                // Procesar según modo actual
                 if (bEnrollando) {
                     procesarEnroll(capturedTemplate);
                 } else {
@@ -290,12 +215,8 @@ public class ZKFingerprintManager {
         }
     }
 
-    /**
-     * Procesa una captura durante el Enroll.
-     * Necesita 3 capturas del mismo dedo, luego hace merge.
-     */
     private void procesarEnroll(byte[] capturedTemplate) {
-        // Verificar que no esté ya registrada
+
         int[] fid = new int[1];
         int[] score = new int[1];
         if (FingerprintSensorEx.DBIdentify(mhDB, capturedTemplate, fid, score) == 0) {
@@ -311,7 +232,6 @@ public class ZKFingerprintManager {
             return;
         }
 
-        // Verificar que sea el mismo dedo (si no es la primera captura)
         if (enrollIdx > 0) {
             int matchResult = FingerprintSensorEx.DBMatch(mhDB, enrollTemplates[enrollIdx - 1], capturedTemplate);
             if (matchResult <= 0) {
@@ -324,7 +244,6 @@ public class ZKFingerprintManager {
             }
         }
 
-        // Guardar captura
         System.arraycopy(capturedTemplate, 0, enrollTemplates[enrollIdx], 0, capturedTemplate.length);
         enrollIdx++;
 
@@ -333,7 +252,6 @@ public class ZKFingerprintManager {
             SwingUtilities.invokeLater(() -> listener.onProgresoEnroll(idx, ENROLL_COUNT));
         }
 
-        // Si tenemos las 3 capturas, hacer merge
         if (enrollIdx >= ENROLL_COUNT) {
             int[] mergedLen = new int[]{TEMPLATE_SIZE};
             byte[] mergedTemplate = new byte[TEMPLATE_SIZE];
@@ -361,13 +279,9 @@ public class ZKFingerprintManager {
         }
     }
 
-    /**
-     * Procesa una captura para identificación 1:N.
-     * Busca la huella en el cache del SDK.
-     */
     private void procesarIdentificacion(byte[] capturedTemplate) {
         if (fidToCedula.isEmpty()) {
-            return; // No hay huellas en cache, no intentar identificar
+            return;
         }
 
         int[] fid = new int[1];
@@ -387,15 +301,6 @@ public class ZKFingerprintManager {
         }
     }
 
-    // =============================================
-    // Utilidades
-    // =============================================
-
-    /**
-     * Guarda la imagen de la huella como archivo BMP.
-     * @param imgBuf buffer de imagen del sensor
-     * @param path ruta donde guardar el BMP
-     */
     public void guardarImagenBMP(byte[] imgBuf, String path) {
         try {
             writeBitmap(imgBuf, fpWidth, fpHeight, path);
@@ -411,10 +316,6 @@ public class ZKFingerprintManager {
     public int getFpHeight() {
         return fpHeight;
     }
-
-    // =============================================
-    // Funciones de utilidad del SDK (bitmap, bytes)
-    // =============================================
 
     private static void writeBitmap(byte[] imageBuf, int nWidth, int nHeight, String path) throws IOException {
         FileOutputStream fos = new FileOutputStream(path);
